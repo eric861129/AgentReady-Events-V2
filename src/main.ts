@@ -1,6 +1,9 @@
+/// <reference types="vite/client" />
+
 import { events, searchEvents, toggleSavedEvent, type EventItem } from './domain/events';
 import { CurrentEventToolLifecycle } from './labs/current-event-tool';
 import { createDeclarativeToolPreview, type DeclarativeToolDefinition } from './labs/declarative-preview';
+import { SearchEventsRuntime, type SearchEventsRuntimeSnapshot } from './webmcp/search-events-runtime';
 import { getSupportedModelContext, readCurrentTools } from './webmcp/support';
 import './styles.css';
 
@@ -13,11 +16,21 @@ if (app === null) {
 const appRoot = app;
 const modelContext = getSupportedModelContext(document);
 const currentEventToolLifecycle = new CurrentEventToolLifecycle(modelContext);
+const temporaryFailureEvidenceScenario =
+  import.meta.env.DEV &&
+  new URLSearchParams(window.location.search).get('evidenceScenario') === 'temporary-unavailable';
+const searchEventsRuntime = new SearchEventsRuntime({
+  context: getSupportedModelContext(document),
+  toolOptions: {
+    isTemporarilyUnavailable: () => temporaryFailureEvidenceScenario
+  }
+});
 
 let activeQuery = '';
 let visibleEvents: readonly EventItem[] = events;
 let savedEventIds: readonly string[] = [];
 let selectedEventId: string | null = null;
+let searchEventsRuntimeSnapshot: SearchEventsRuntimeSnapshot | null = null;
 
 const declarativeSearchLabDefinition: DeclarativeToolDefinition = {
   toolname: 'search_events_lab',
@@ -45,6 +58,7 @@ function render(): void {
         <p>這是尚未加入 WebMCP 的人類操作基線。你可以搜尋活動並收藏有興趣的場次。</p>
       </section>
       ${renderWebMcpConceptCard()}
+      ${renderWebMcpRuntimePanel()}
       <form class="search-form" id="event-search-form">
         <label for="event-search">搜尋活動</label>
         <div class="search-controls">
@@ -67,6 +81,53 @@ function render(): void {
   `;
 
   void synchronizeCurrentEventTool();
+}
+
+function renderWebMcpRuntimePanel(): string {
+  const hasNativeSupport = searchEventsRuntimeSnapshot?.nativeSupport ?? modelContext !== null;
+  const registrationStatus = searchEventsRuntimeSnapshot?.registrationStatus ?? '正在初始化 WebMCP runtime。';
+  const discoveredTools = searchEventsRuntimeSnapshot?.discoveredTools ?? [];
+  const toolNames = discoveredTools.map((tool) => `<li><code>${escapeHtml(tool.name)}</code></li>`).join('');
+  const lastInvocation = searchEventsRuntimeSnapshot?.lastInvocation;
+  const runtimeError = searchEventsRuntimeSnapshot?.errorMessage;
+
+  return `
+    <section class="webmcp-runtime-panel" data-testid="webmcp-runtime-panel" aria-labelledby="webmcp-runtime-title">
+      <p class="section-label">Day 15｜Agent Discovery</p>
+      <h2 id="webmcp-runtime-title">原生 WebMCP 證據面板</h2>
+      <div class="runtime-status-grid">
+        <div>
+          <strong>Native support</strong>
+          <p>document.modelContext ${hasNativeSupport ? '可用' : '不可用'}</p>
+        </div>
+        <div>
+          <strong>Registration status</strong>
+          <p>${escapeHtml(registrationStatus)}</p>
+        </div>
+        <div>
+          <strong>Discovered tools</strong>
+          ${toolNames === '' ? '<p>尚未發現 Tool。</p>' : `<ul>${toolNames}</ul>`}
+        </div>
+      </div>
+      ${runtimeError === undefined ? '' : `<p class="runtime-warning">${escapeHtml(runtimeError)}</p>`}
+      <form id="native-tool-evidence-form">
+        <label for="native-tool-query">直接呼叫輸入</label>
+        <div class="search-controls">
+          <input id="native-tool-query" name="query" type="search" value="前端" data-testid="native-tool-query" />
+          <button type="submit" data-testid="native-tool-invoke">用瀏覽器 API 驗證</button>
+        </div>
+      </form>
+      <p class="runtime-warning">這是瀏覽器 API 驗證，不是 AI Agent 對話。</p>
+      ${lastInvocation === undefined ? '' : `
+        <div class="runtime-evidence-log" aria-live="polite">
+          <strong>Last invocation input</strong>
+          <pre><code>${escapeHtml(JSON.stringify(lastInvocation.input, null, 2))}</code></pre>
+          <strong>Raw result</strong>
+          <pre><code>${escapeHtml(lastInvocation.rawResult)}</code></pre>
+        </div>
+      `}
+    </section>
+  `;
 }
 
 function renderWebMcpConceptCard(): string {
@@ -245,8 +306,27 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '未知錯誤';
 }
 
+async function initializeSearchEventsRuntime(): Promise<void> {
+  searchEventsRuntimeSnapshot = await searchEventsRuntime.initialize();
+  render();
+}
+
+async function invokeSearchEventsForEvidence(form: HTMLFormElement): Promise<void> {
+  const formData = new FormData(form);
+  const query = String(formData.get('query') ?? '');
+  searchEventsRuntimeSnapshot = await searchEventsRuntime.invokeForEvidence({ query });
+  render();
+}
+
 appRoot.addEventListener('submit', (event) => {
   if (!(event.target instanceof HTMLFormElement)) {
+    return;
+  }
+
+  if (event.target.id === 'native-tool-evidence-form') {
+    event.preventDefault();
+    void invokeSearchEventsForEvidence(event.target);
+
     return;
   }
 
@@ -295,3 +375,4 @@ appRoot.addEventListener('click', (event) => {
 });
 
 render();
+void initializeSearchEventsRuntime();
