@@ -31,6 +31,8 @@ let visibleEvents: readonly EventItem[] = events;
 let savedEventIds: readonly string[] = [];
 let selectedEventId: string | null = null;
 let searchEventsRuntimeSnapshot: SearchEventsRuntimeSnapshot | null = null;
+let nativeToolQuery = '前端';
+let searchEventsRuntimeOperation: Promise<void> = Promise.resolve();
 
 const declarativeSearchLabDefinition: DeclarativeToolDefinition = {
   toolname: 'search_events_lab',
@@ -113,13 +115,13 @@ function renderWebMcpRuntimePanel(): string {
       <form id="native-tool-evidence-form">
         <label for="native-tool-query">直接呼叫輸入</label>
         <div class="search-controls">
-          <input id="native-tool-query" name="query" type="search" value="前端" data-testid="native-tool-query" />
+          <input id="native-tool-query" name="query" type="search" value="${escapeHtml(nativeToolQuery)}" data-testid="native-tool-query" />
           <button type="submit" data-testid="native-tool-invoke">用瀏覽器 API 驗證</button>
         </div>
       </form>
       <p class="runtime-warning">這是瀏覽器 API 驗證，不是 AI Agent 對話。</p>
       ${lastInvocation === undefined ? '' : `
-        <div class="runtime-evidence-log" aria-live="polite">
+        <div class="runtime-evidence-log" data-testid="runtime-evidence-log" aria-live="polite">
           <strong>Last invocation input</strong>
           <pre><code>${escapeHtml(JSON.stringify(lastInvocation.input, null, 2))}</code></pre>
           <strong>Raw result</strong>
@@ -306,16 +308,24 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '未知錯誤';
 }
 
-async function initializeSearchEventsRuntime(): Promise<void> {
-  searchEventsRuntimeSnapshot = await searchEventsRuntime.initialize();
-  render();
+function enqueueSearchEventsRuntimeOperation(
+  operation: () => Promise<SearchEventsRuntimeSnapshot>
+): void {
+  searchEventsRuntimeOperation = searchEventsRuntimeOperation.then(async () => {
+    searchEventsRuntimeSnapshot = await operation();
+    render();
+  });
 }
 
-async function invokeSearchEventsForEvidence(form: HTMLFormElement): Promise<void> {
+function initializeSearchEventsRuntime(): void {
+  enqueueSearchEventsRuntimeOperation(() => searchEventsRuntime.initialize());
+}
+
+function invokeSearchEventsForEvidence(form: HTMLFormElement): void {
   const formData = new FormData(form);
   const query = String(formData.get('query') ?? '');
-  searchEventsRuntimeSnapshot = await searchEventsRuntime.invokeForEvidence({ query });
-  render();
+  nativeToolQuery = query;
+  enqueueSearchEventsRuntimeOperation(() => searchEventsRuntime.invokeForEvidence({ query }));
 }
 
 appRoot.addEventListener('submit', (event) => {
@@ -325,7 +335,7 @@ appRoot.addEventListener('submit', (event) => {
 
   if (event.target.id === 'native-tool-evidence-form') {
     event.preventDefault();
-    void invokeSearchEventsForEvidence(event.target);
+    invokeSearchEventsForEvidence(event.target);
 
     return;
   }
@@ -345,6 +355,20 @@ appRoot.addEventListener('submit', (event) => {
   activeQuery = String(formData.get('query') ?? '');
   visibleEvents = searchEvents(activeQuery);
   render();
+});
+
+appRoot.addEventListener('input', (event) => {
+  if (!(event.target instanceof HTMLInputElement)) {
+    return;
+  }
+
+  if (event.target.id === 'event-search') {
+    activeQuery = event.target.value;
+  }
+
+  if (event.target.id === 'native-tool-query') {
+    nativeToolQuery = event.target.value;
+  }
 });
 
 appRoot.addEventListener('click', (event) => {
@@ -375,4 +399,4 @@ appRoot.addEventListener('click', (event) => {
 });
 
 render();
-void initializeSearchEventsRuntime();
+initializeSearchEventsRuntime();
