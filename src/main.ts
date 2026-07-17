@@ -1,4 +1,5 @@
 import { events, searchEvents, toggleSavedEvent, type EventItem } from './domain/events';
+import { createDeclarativeToolPreview, type DeclarativeToolDefinition } from './labs/declarative-preview';
 import './styles.css';
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -13,6 +14,19 @@ let activeQuery = '';
 let visibleEvents: readonly EventItem[] = events;
 let savedEventIds: readonly string[] = [];
 let selectedEventId: string | null = null;
+
+const declarativeSearchLabDefinition: DeclarativeToolDefinition = {
+  toolname: 'search_events_lab',
+  tooldescription: '依關鍵字尋找公開活動。這是 Day 11 的宣告式練習，不是正式搜尋 Tool。',
+  fields: [
+    {
+      name: 'query',
+      type: 'search',
+      description: '用於比對公開活動的關鍵字。',
+      required: true
+    }
+  ]
+};
 
 function render(): void {
   appRoot.innerHTML = `
@@ -43,6 +57,7 @@ function render(): void {
           ${visibleEvents.map(renderEventCard).join('')}
         </div>
       </section>
+      ${renderDeclarativeSearchLab()}
       ${renderEventDetail()}
     </main>
   `;
@@ -93,6 +108,46 @@ function renderEventCard(event: EventItem): string {
   `;
 }
 
+function renderDeclarativeSearchLab(): string {
+  const preview = createDeclarativeToolPreview(declarativeSearchLabDefinition);
+
+  return `
+    <section class="webmcp-lab" aria-labelledby="declarative-lab-title">
+      <div class="webmcp-lab__heading">
+        <div>
+          <p class="section-label">Day 11｜Declarative API Lab</p>
+          <h2 id="declarative-lab-title">讓標準表單描述練習用能力</h2>
+        </div>
+        <p>這個 Lab 與正式 Demo 搜尋表單分開；它的名稱固定為 <code>search_events_lab</code>。</p>
+      </div>
+      <form
+        class="declarative-lab-form"
+        id="declarative-search-lab"
+        toolname="search_events_lab"
+        tooldescription="依關鍵字尋找公開活動。這是 Day 11 的宣告式練習，不是正式搜尋 Tool。"
+      >
+        <label for="declarative-search-query">活動關鍵字</label>
+        <div class="search-controls">
+          <input
+            id="declarative-search-query"
+            name="query"
+            type="search"
+            required
+            toolparamdescription="用於比對公開活動的關鍵字。"
+            placeholder="例如：前端"
+          />
+          <button type="submit">填寫 Lab 表單</button>
+        </div>
+      </form>
+      <div class="webmcp-lab__preview" data-testid="declarative-preview">
+        <h3>教學結構預覽（非 Agent discovery）</h3>
+        <p>支援 WebMCP 的瀏覽器會從表單屬性合成 schema；以下內容只顯示本 Lab 的預期結構，沒有模擬或呼叫 Agent。</p>
+        <pre><code>${escapeHtml(JSON.stringify(preview, null, 2))}</code></pre>
+      </div>
+    </section>
+  `;
+}
+
 function renderEventDetail(): string {
   const selectedEvent = events.find((event) => event.id === selectedEventId);
 
@@ -136,7 +191,17 @@ function escapeHtml(value: string): string {
 }
 
 appRoot.addEventListener('submit', (event) => {
-  if (!(event.target instanceof HTMLFormElement) || event.target.id !== 'event-search-form') {
+  if (!(event.target instanceof HTMLFormElement)) {
+    return;
+  }
+
+  if (event.target.id === 'declarative-search-lab') {
+    event.preventDefault();
+
+    return;
+  }
+
+  if (event.target.id !== 'event-search-form') {
     return;
   }
 
