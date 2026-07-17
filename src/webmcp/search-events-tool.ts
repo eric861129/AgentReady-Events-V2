@@ -17,7 +17,7 @@ export function createSearchEventsTool(
       properties: {
         query: {
           type: 'string',
-          description: '必填。用於比對活動名稱、分類、地點與摘要；請提供可讀的關鍵字。'
+          description: '使用者想尋找的活動關鍵字，例如「前端」、「API」或「社群」。'
         },
         category: {
           type: 'string',
