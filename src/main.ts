@@ -30,7 +30,7 @@ function render(): void {
         <label for="event-search">搜尋活動</label>
         <div class="search-controls">
           <input id="event-search" name="query" type="search" value="${escapeHtml(activeQuery)}" placeholder="例如：前端、產品或台北" />
-          <button type="submit">搜尋活動</button>
+          <button type="submit" data-testid="search-events-button">搜尋活動</button>
         </div>
       </form>
       <section class="event-results" aria-labelledby="event-results-title" aria-live="polite">
@@ -52,7 +52,7 @@ function renderEventCard(event: EventItem): string {
   const saveLabel = isSaved ? '已收藏' : '收藏活動';
 
   return `
-    <article class="event-card">
+    <article class="event-card" data-event-id="${event.id}">
       <div class="event-card__meta">
         <span>${event.category}</span>
         <time datetime="${event.date}">${formatDate(event.date)}</time>

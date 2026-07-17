@@ -9,8 +9,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --exclude 'tests/browser/**'",
+    "test": "vitest run --exclude 'tests/browser/**' --exclude 'tests/experiments/**'",
     "test:browser": "playwright test",
+    "test:browser:button-copy": "playwright test --config playwright.button-copy-experiment.config.ts",
     "capture:articles": "node scripts/capture-article-screenshots.mjs",
     "build": "npm run typecheck && vite build"
   },

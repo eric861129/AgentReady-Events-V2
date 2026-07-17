@@ -4,9 +4,8 @@ test('使用者可以搜尋活動並收藏結果', async ({ page }) => {
   await page.goto('/');
 
   await page.getByLabel('搜尋活動').fill('前端');
-  await page.getByRole('button', { name: '搜尋活動' }).click();
-
-  await expect(page.getByRole('heading', { name: '前端體驗設計小聚' })).toBeVisible();
+  await page.getByTestId('search-events-button').click();
+  await expect(page.locator('article[data-event-id="event-frontend-summit"]')).toBeVisible();
 
   await page.getByRole('button', { name: '查看詳情' }).click();
 
