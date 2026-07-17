@@ -28,8 +28,21 @@ test('注入 document.modelContext browser test double 時顯示 discovery 與�
             }
           ];
         },
-        async executeTool(name: string, input: Record<string, unknown>) {
-          return { status: 'ok', name, input };
+        async executeTool(_name: string, input: Record<string, unknown>) {
+          return {
+            status: 'ok',
+            appliedFilters: input,
+            results: [
+              {
+                eventId: 'evt-frontend-001',
+                title: '前端實作交流會',
+                category: '前端',
+                date: '2026-08-08',
+                location: '台北',
+                summary: 'Browser test double 的搜尋結果。'
+              }
+            ]
+          };
         }
       }
     });
@@ -47,6 +60,10 @@ test('注入 document.modelContext browser test double 時顯示 discovery 與�
   await expect(evidenceLog).toContainText('前端');
   await expect(evidenceLog).toContainText('status');
   await expect(evidenceLog).toContainText('ok');
+  await expect(evidenceLog).toContainText('eventId');
+  await expect(evidenceLog).toContainText('前端實作交流會');
+  await expect(evidenceLog).toContainText('2026-08-08');
+  await expect(evidenceLog).toContainText('台北');
 });
 
 test('延遲 document.modelContext browser test double 時依序完成註冊再 invocation 並保留輸入與最終證據', async ({ page }) => {
@@ -119,9 +136,22 @@ async function installDelayedModelContextBrowserTestDouble(page: Page): Promise<
             }
           ];
         },
-        async executeTool(name: string, input: Record<string, unknown>) {
+        async executeTool(_name: string, input: Record<string, unknown>) {
           calls.push('executeTool');
-          return { status: 'ok', name, input };
+          return {
+            status: 'ok',
+            appliedFilters: input,
+            results: [
+              {
+                eventId: 'evt-product-001',
+                title: '產品交流會',
+                category: '產品',
+                date: '2026-09-09',
+                location: '林口',
+                summary: '延遲 browser test double 的搜尋結果。'
+              }
+            ]
+          };
         }
       }
     });
