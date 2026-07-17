@@ -26,6 +26,7 @@ function render(): void {
         <h1 id="page-title">探索下一場值得參加的活動</h1>
         <p>這是尚未加入 WebMCP 的人類操作基線。你可以搜尋活動並收藏有興趣的場次。</p>
       </section>
+      ${renderWebMcpConceptCard()}
       <form class="search-form" id="event-search-form">
         <label for="event-search">搜尋活動</label>
         <div class="search-controls">
@@ -44,6 +45,30 @@ function render(): void {
       </section>
       ${renderEventDetail()}
     </main>
+  `;
+}
+
+function renderWebMcpConceptCard(): string {
+  return `
+    <section class="webmcp-concept" data-testid="webmcp-concept-card" aria-labelledby="webmcp-concept-title">
+      <div>
+        <p class="section-label">Day 6 概念對照</p>
+        <h2 id="webmcp-concept-title">同一個需求，網站可以用兩種方式被理解</h2>
+      </div>
+      <div class="webmcp-concept__grid">
+        <article>
+          <h3>人類看見的 UI</h3>
+          <p>找到搜尋框、輸入關鍵字、按下按鈕，再從畫面判斷結果。</p>
+        </article>
+        <article>
+          <h3>Agent 需要的能力描述</h3>
+          <pre><code>name: search_events
+input: { query: string }
+result: 活動摘要清單</code></pre>
+        </article>
+      </div>
+      <p class="webmcp-concept__notice">這不是正式 Tool 註冊，也沒有 Agent discovery 或 invocation；它只用來說明 WebMCP 想解決的描述落差。</p>
+    </section>
   `;
 }
 
