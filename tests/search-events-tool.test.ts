@@ -53,23 +53,29 @@ describe('searchEventsForTool', () => {
   ];
 
   it.each(invalidInputs)('returns INVALID_ARGUMENT for %s', (input) => {
-    expect(searchEventsForTool(input)).toMatchObject({
+    expect(searchEventsForTool(input)).toEqual({
       status: 'error',
-      errorCode: 'INVALID_ARGUMENT'
+      errorCode: 'INVALID_ARGUMENT',
+      message: '搜尋活動需要有效的 query，category 必須是已知分類，date 必須是 YYYY-MM-DD。',
+      guidance: '請提供非空白 query；category 可使用「前端、後端、產品、社群」；date 請使用像 2026-08-08 的格式。'
     });
   });
 
   it('returns NO_RESULTS when no events match', () => {
-    expect(searchEventsForTool({ query: 'does-not-exist' })).toMatchObject({
+    expect(searchEventsForTool({ query: 'does-not-exist' })).toEqual({
       status: 'error',
-      errorCode: 'NO_RESULTS'
+      errorCode: 'NO_RESULTS',
+      message: '找不到符合條件的活動。',
+      guidance: '請放寬關鍵字、移除分類或日期限制後再試一次。'
     });
   });
 
   it('returns TEMPORARY_UNAVAILABLE when the source is unavailable', () => {
-    expect(searchEventsForTool({ query: events[0].category }, { isTemporarilyUnavailable: () => true })).toMatchObject({
+    expect(searchEventsForTool({ query: events[0].category }, { isTemporarilyUnavailable: () => true })).toEqual({
       status: 'error',
-      errorCode: 'TEMPORARY_UNAVAILABLE'
+      errorCode: 'TEMPORARY_UNAVAILABLE',
+      message: '活動搜尋目前暫時無法使用。',
+      guidance: '請稍後再試，或移除受控測試情境後重新呼叫 search_events。'
     });
   });
 
