@@ -34,7 +34,7 @@ git switch day-14-declarative-search-tool
 | Day | Reader branch | Tag | 狀態 |
 |---:|---|---|---|
 | 01 | `day-01-intro` | `v0.1.0-day-01` | 已建立 |
-| 02 | `day-02-environment` | `v0.1.0-day-02` | 待建立 |
+| 02 | `day-02-environment` | `v0.1.0-day-02` | 已建立 |
 | 03 | `day-03-human-flow` | `v0.1.0-day-03` | 待建立 |
 | 04 | `day-04-playwright` | `v0.1.0-day-04` | 待建立 |
 | 05 | `day-05-button-copy-experiment` | `v0.1.0-day-05` | 待建立 |

@@ -2,18 +2,18 @@
 
 這是「網站終於會說話：30 天從瀏覽器自動化走進 WebMCP」的示範專案。每一天都有一個固定的 Git branch，讀者可以下載與當日文章一致的版本，而不必從最新程式碼倒推過去的步驟。
 
-## Day 1 快照
+## Day 1–2 共同起點
 
-Day 1 的 `day-01-intro` branch 提供尚未加入 WebMCP 的活動網站基線：人類可搜尋活動、查看詳情並收藏活動。它刻意不包含 WebMCP 宣告、Agent discovery 或 Tool invocation。
+Day 1 的 `day-01-intro` branch 提供活動網站基線：人類可搜尋活動、查看詳情並收藏活動。Day 1 不包含 WebMCP 行為；Day 2 則提供可重現的本機開發環境。
 
 ```powershell
-git clone --branch day-01-intro <repository-url>
+git clone --branch day-02-environment <repository-url>
 Set-Location AgentReady-Events-V2
 npm install
 npm run dev
 ```
 
-請以 Node.js 22.12 或更新版本執行。開啟終端輸出的本機網址後，即可操作活動網站。
+請以 Node.js 22.12 或更新版本執行。完整的安裝、啟動、驗證與排查步驟請見 [Day 2 本機開發環境](docs/day-02-environment.md)。
 
 ## 驗證
 
