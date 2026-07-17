@@ -10,7 +10,10 @@ const baseURL = process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:4173';
 
 await Promise.all([
   mkdir(path.join(assetDirectory, 'day-01'), { recursive: true }),
-  mkdir(path.join(assetDirectory, 'day-03'), { recursive: true })
+  mkdir(path.join(assetDirectory, 'day-03'), { recursive: true }),
+  mkdir(path.join(assetDirectory, 'day-06'), { recursive: true }),
+  mkdir(path.join(assetDirectory, 'day-11'), { recursive: true }),
+  mkdir(path.join(assetDirectory, 'day-12'), { recursive: true })
 ]);
 
 const browser = await chromium.launch();
@@ -20,15 +23,26 @@ try {
   await page.goto(baseURL, { waitUntil: 'networkidle' });
   await page.screenshot({ path: path.join(assetDirectory, 'day-01', 'event-site-baseline.png'), fullPage: true });
 
+  await page.getByTestId('webmcp-concept-card').screenshot({
+    path: path.join(assetDirectory, 'day-06', 'webmcp-concept.png')
+  });
+
   await page.getByLabel('搜尋活動').fill('前端');
-  await page.getByRole('button', { name: '搜尋活動' }).click();
+  await page.getByTestId('search-events-button').click();
   await page.getByRole('heading', { name: '前端體驗設計小聚' }).waitFor();
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: path.join(assetDirectory, 'day-03', 'search-results.png'), fullPage: true });
 
+  await page.locator('section').filter({ has: page.locator('#declarative-search-lab') }).screenshot({
+    path: path.join(assetDirectory, 'day-11', 'declarative-lab.png')
+  });
+
   await page.getByRole('button', { name: '查看詳情' }).click();
   await page.getByRole('dialog').waitFor();
   await page.screenshot({ path: path.join(assetDirectory, 'day-03', 'event-detail.png'), fullPage: true });
+  await page.getByRole('dialog').screenshot({
+    path: path.join(assetDirectory, 'day-12', 'imperative-lab-unsupported-browser.png')
+  });
 } finally {
   await browser.close();
 }

@@ -1,5 +1,7 @@
 import { events, searchEvents, toggleSavedEvent, type EventItem } from './domain/events';
+import { CurrentEventToolLifecycle } from './labs/current-event-tool';
 import { createDeclarativeToolPreview, type DeclarativeToolDefinition } from './labs/declarative-preview';
+import { getSupportedModelContext, readCurrentTools } from './webmcp/support';
 import './styles.css';
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -9,6 +11,8 @@ if (app === null) {
 }
 
 const appRoot = app;
+const modelContext = getSupportedModelContext(document);
+const currentEventToolLifecycle = new CurrentEventToolLifecycle(modelContext);
 
 let activeQuery = '';
 let visibleEvents: readonly EventItem[] = events;
@@ -61,6 +65,8 @@ function render(): void {
       ${renderEventDetail()}
     </main>
   `;
+
+  void synchronizeCurrentEventTool();
 }
 
 function renderWebMcpConceptCard(): string {
@@ -163,9 +169,54 @@ function renderEventDetail(): string {
         <h2 id="event-dialog-title">${selectedEvent.title}</h2>
         <p>${selectedEvent.summary}</p>
         <p class="event-card__location">地點：${selectedEvent.location}</p>
+        ${renderImperativeLabStatus()}
       </section>
     </div>
   `;
+}
+
+function renderImperativeLabStatus(): string {
+  if (modelContext === null) {
+    return `
+      <aside class="imperative-lab-status" data-testid="imperative-lab-status" aria-live="polite">
+        <strong>Day 12｜Imperative API Lab</strong>
+        <p>此瀏覽器未提供 WebMCP，因此沒有註冊 Tool，也沒有 Agent discovery 或 invocation。</p>
+      </aside>
+    `;
+  }
+
+  return `
+    <aside class="imperative-lab-status" data-testid="imperative-lab-status" aria-live="polite">
+      <strong>Day 12｜Imperative API Lab</strong>
+      <p>正在向瀏覽器註冊目前活動的唯讀 Lab Tool，並讀取實際可見的 Tool 清單。</p>
+    </aside>
+  `;
+}
+
+async function synchronizeCurrentEventTool(): Promise<void> {
+  const selectedEvent = events.find((event) => event.id === selectedEventId) ?? null;
+
+  try {
+    await currentEventToolLifecycle.sync(selectedEvent);
+
+    if (modelContext === null || selectedEvent === null) {
+      return;
+    }
+
+    const tools = await readCurrentTools(modelContext);
+    const status = appRoot.querySelector<HTMLElement>('[data-testid="imperative-lab-status"]');
+
+    if (status !== null && selectedEvent.id === selectedEventId) {
+      const toolNames = tools.map((tool) => tool.name).join('、') || '（目前清單為空）';
+      status.innerHTML = `<strong>Day 12｜Imperative API Lab</strong><p>瀏覽器目前可見的 Tool：${escapeHtml(toolNames)}。這是 <code>getTools()</code> 的實際結果。</p>`;
+    }
+  } catch (error) {
+    const status = appRoot.querySelector<HTMLElement>('[data-testid="imperative-lab-status"]');
+
+    if (status !== null && selectedEvent !== null && selectedEvent.id === selectedEventId) {
+      status.innerHTML = `<strong>Day 12｜Imperative API Lab</strong><p>瀏覽器拒絕或無法完成 Tool 註冊：${escapeHtml(getErrorMessage(error))}</p>`;
+    }
+  }
 }
 
 function formatDate(value: string): string {
@@ -188,6 +239,10 @@ function escapeHtml(value: string): string {
 
     return entities[character] ?? character;
   });
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : '未知錯誤';
 }
 
 appRoot.addEventListener('submit', (event) => {

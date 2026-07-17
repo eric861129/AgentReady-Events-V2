@@ -338,6 +338,27 @@ h1 {
   padding-right: 2.5rem;
 }
 
+.imperative-lab-status {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #bcd0fc;
+  border-radius: 0.75rem;
+  background: #f3f7ff;
+}
+
+.imperative-lab-status strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #254fae;
+  font-size: 0.875rem;
+}
+
+.imperative-lab-status p {
+  margin-bottom: 0;
+  color: #4d5b75;
+  font-size: 0.875rem;
+}
+
 .dialog-close {
   position: absolute;
   top: 1rem;
