@@ -1,0 +1,262 @@
+:root {
+  color: #172036;
+  background: #f5f7fb;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.25rem clamp(1.25rem, 5vw, 5rem);
+  color: #e9efff;
+  background: #172036;
+}
+
+.brand {
+  color: inherit;
+  font-size: 1.125rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.site-header p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #b9c5df;
+}
+
+.page-shell {
+  width: min(1100px, calc(100% - 2.5rem));
+  margin: 0 auto;
+  padding: clamp(3rem, 8vw, 6rem) 0;
+}
+
+.intro {
+  max-width: 720px;
+}
+
+.section-label,
+.event-card__meta,
+.result-heading p {
+  color: #61708d;
+  font-size: 0.875rem;
+}
+
+.section-label {
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+
+.intro > p:last-child {
+  color: #4d5b75;
+  font-size: 1.0625rem;
+}
+
+.search-form {
+  margin: 2.5rem 0 3.5rem;
+}
+
+.search-form > label {
+  display: block;
+  margin-bottom: 0.625rem;
+  font-weight: 700;
+}
+
+.search-controls {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.search-controls input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid #c8d1e1;
+  border-radius: 0.625rem;
+  color: #172036;
+  background: #fff;
+}
+
+.search-controls button,
+.event-card button {
+  border: 0;
+  border-radius: 0.625rem;
+  color: #fff;
+  background: #315bc5;
+  font-weight: 700;
+}
+
+.search-controls button {
+  flex: 0 0 auto;
+  padding: 0.875rem 1.25rem;
+}
+
+.result-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.result-heading h2,
+.result-heading p {
+  margin-bottom: 0;
+}
+
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.event-card {
+  display: flex;
+  min-height: 255px;
+  flex-direction: column;
+  padding: 1.5rem;
+  border: 1px solid #dce3f0;
+  border-radius: 0.875rem;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(31 52 94 / 0.06);
+}
+
+.event-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.event-card h3 {
+  margin-bottom: 0.75rem;
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.event-card p {
+  color: #4d5b75;
+}
+
+.event-card__location {
+  margin-top: auto;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.event-card button {
+  align-self: flex-start;
+  padding: 0.625rem 0.875rem;
+}
+
+.event-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+.event-card__actions button {
+  margin: 0;
+}
+
+.event-card__detail {
+  color: #315bc5 !important;
+  background: #e9efff !important;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 1;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgb(23 32 54 / 0.42);
+}
+
+.event-dialog {
+  position: relative;
+  width: min(560px, 100%);
+  padding: 2rem;
+  border-radius: 0.875rem;
+  background: #fff;
+  box-shadow: 0 24px 60px rgb(10 21 48 / 0.28);
+}
+
+.event-dialog h2 {
+  padding-right: 2.5rem;
+}
+
+.dialog-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  color: #172036;
+  background: #e9efff;
+  font-size: 1.25rem;
+}
+
+button:hover {
+  background: #24489f;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #8eaef7;
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .site-header,
+  .search-controls,
+  .result-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .site-header p {
+    font-size: 0.8125rem;
+  }
+
+  .search-controls button {
+    width: 100%;
+  }
+}
