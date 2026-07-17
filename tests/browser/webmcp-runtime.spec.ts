@@ -66,6 +66,20 @@ test('注入 document.modelContext browser test double 時顯示 discovery 與�
   await expect(evidenceLog).toContainText('台北');
 });
 
+test('受控暫時失敗情境會在直接證據面板顯示 TEMPORARY_UNAVAILABLE', async ({ page }) => {
+  await installRegisteredToolBrowserTestDouble(page);
+  await page.goto('/?evidenceScenario=temporary-unavailable');
+
+  const panel = page.getByTestId('webmcp-runtime-panel');
+  await expect(panel).toContainText('已透過 document.modelContext 註冊 search_events');
+
+  await page.getByTestId('native-tool-invoke').click();
+
+  const evidenceLog = panel.getByTestId('runtime-evidence-log');
+  await expect(evidenceLog).toContainText('前端');
+  await expect(evidenceLog).toContainText('TEMPORARY_UNAVAILABLE');
+});
+
 test('延遲 document.modelContext browser test double 時依序完成註冊再 invocation 並保留輸入與最終證據', async ({ page }) => {
   await installDelayedModelContextBrowserTestDouble(page);
   await page.goto('/');
@@ -179,4 +193,39 @@ async function releaseRaceGate(
     ).__webMcpRaceControl;
     control[gateName]();
   }, gate);
+}
+
+async function installRegisteredToolBrowserTestDouble(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    type RegisteredTool = {
+      readonly name: string;
+      readonly execute: (input: Record<string, unknown>) => unknown | Promise<unknown>;
+    };
+    let registeredTool: RegisteredTool | undefined;
+
+    Object.defineProperty(document, 'modelContext', {
+      configurable: true,
+      value: {
+        async registerTool(tool: RegisteredTool) {
+          registeredTool = tool;
+        },
+        async getTools() {
+          return registeredTool === undefined
+            ? []
+            : [{
+                name: registeredTool.name,
+                description: '已註冊 Tool 的 browser test double。',
+                inputSchema: '{"type":"object"}'
+              }];
+        },
+        async executeTool(name: string, input: Record<string, unknown>) {
+          if (registeredTool === undefined || name !== registeredTool.name) {
+            throw new Error('browser test double 找不到已註冊的 Tool。');
+          }
+
+          return registeredTool.execute(input);
+        }
+      }
+    });
+  });
 }
