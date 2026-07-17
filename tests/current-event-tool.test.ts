@@ -54,6 +54,7 @@ describe('CurrentEventToolLifecycle', () => {
 function createModelContext(registerTool: ModelContext['registerTool']): ModelContext {
   return {
     registerTool,
-    getTools: vi.fn().mockResolvedValue([])
+    getTools: vi.fn().mockResolvedValue([]),
+    executeTool: vi.fn().mockResolvedValue(undefined)
   };
 }

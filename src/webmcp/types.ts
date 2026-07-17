@@ -28,6 +28,7 @@ export interface ExposedTool {
 export interface ModelContext {
   registerTool(tool: ModelContextTool, options?: { signal?: AbortSignal }): Promise<void>;
   getTools(): Promise<readonly ExposedTool[]>;
+  executeTool(name: string, input: Record<string, unknown>): Promise<unknown>;
 }
 
 declare global {

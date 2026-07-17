@@ -31,11 +31,18 @@ describe('WebMCP support detection', () => {
     ]);
     await expect(readCurrentTools(null)).resolves.toEqual([]);
   });
+
+  it('保留瀏覽器原生 executeTool 呼叫契約', async () => {
+    const context = createModelContext();
+
+    await expect(context.executeTool('get_current_event_lab', { eventId: 'evt-1' })).resolves.toBeUndefined();
+  });
 });
 
 function createModelContext(tools: readonly { name: string; description: string; inputSchema: string }[] = []): ModelContext {
   return {
     registerTool: vi.fn(),
-    getTools: vi.fn().mockResolvedValue(tools)
+    getTools: vi.fn().mockResolvedValue(tools),
+    executeTool: vi.fn().mockResolvedValue(undefined)
   };
 }
