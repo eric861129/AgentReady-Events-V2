@@ -30,7 +30,7 @@ function render(): void {
         <label for="event-search">搜尋活動</label>
         <div class="search-controls">
           <input id="event-search" name="query" type="search" value="${escapeHtml(activeQuery)}" placeholder="例如：前端、產品或台北" />
-          <button type="submit" data-testid="search-events-button">搜尋活動</button>
+          <button type="submit" data-testid="search-events-button">開始搜尋</button>
         </div>
       </form>
       <section class="event-results" aria-labelledby="event-results-title" aria-live="polite">

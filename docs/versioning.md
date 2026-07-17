@@ -37,7 +37,7 @@ git switch day-14-declarative-search-tool
 | 02 | `day-02-environment` | `v0.1.0-day-02` | 已建立 |
 | 03 | `day-03-human-flow` | `v0.1.0-day-03` | 已建立 |
 | 04 | `day-04-playwright` | `v0.1.0-day-04` | 已建立 |
-| 05 | `day-05-button-copy-experiment` | `v0.1.0-day-05` | 待建立 |
+| 05 | `day-05-button-copy-experiment` | `v0.1.0-day-05` | 已建立 |
 | 06 | `day-06-webmcp-concept` | `v0.1.0-day-06` | 待建立 |
 | 07 | `day-07-technology-boundaries` | `v0.1.0-day-07` | 待建立 |
 | 08 | `day-08-tool-contract` | `v0.1.0-day-08` | 待建立 |
