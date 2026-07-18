@@ -57,7 +57,7 @@ function render(): void {
       <section class="intro" aria-labelledby="page-title">
         <p class="section-label">本系列 Demo</p>
         <h1 id="page-title">探索下一場值得參加的活動</h1>
-        <p>這是尚未加入 WebMCP 的人類操作基線。你可以搜尋活動並收藏有興趣的場次。</p>
+        <p>這是供人類搜尋與收藏活動的操作基線。你可以搜尋活動並收藏有興趣的場次。</p>
       </section>
       ${renderWebMcpConceptCard()}
       ${renderWebMcpRuntimePanel()}
@@ -95,7 +95,7 @@ function renderWebMcpRuntimePanel(): string {
 
   return `
     <section class="webmcp-runtime-panel" data-testid="webmcp-runtime-panel" aria-labelledby="webmcp-runtime-title">
-      <p class="section-label">Day 15｜Agent Discovery</p>
+      <p class="section-label">Day 15｜Browser runtime observation</p>
       <h2 id="webmcp-runtime-title">原生 WebMCP 證據面板</h2>
       <div class="runtime-status-grid">
         <div>
@@ -107,10 +107,11 @@ function renderWebMcpRuntimePanel(): string {
           <p>${escapeHtml(registrationStatus)}</p>
         </div>
         <div>
-          <strong>Discovered tools</strong>
-          ${toolNames === '' ? '<p>尚未發現 Tool。</p>' : `<ul>${toolNames}</ul>`}
+          <strong>Browser API observation</strong>
+          ${toolNames === '' ? '<p>尚未觀測到 Tool。</p>' : `<ul>${toolNames}</ul>`}
         </div>
       </div>
+      <p class="runtime-warning">此清單是 document.modelContext.getTools() 的 Browser observation，不是 Gemini／AI Agent discovery；真實 Agent／Inspector 證據會另行手動記錄。</p>
       ${runtimeError === undefined ? '' : `<p class="runtime-warning">${escapeHtml(runtimeError)}</p>`}
       <form id="native-tool-evidence-form">
         <label for="native-tool-query">直接呼叫輸入</label>

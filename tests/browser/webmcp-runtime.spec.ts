@@ -3,9 +3,19 @@ import { expect, test, type Page } from '@playwright/test';
 test('一般瀏覽器未注入 browser test double 時誠實顯示不支援原生 WebMCP', async ({ page }) => {
   await page.goto('/');
 
+  const humanSearchBaseline = page.locator('.intro p').last();
+  await expect(humanSearchBaseline).toContainText('供人類搜尋與收藏活動的操作基線');
+  await expect(humanSearchBaseline).not.toContainText('尚未加入 WebMCP');
+
   const panel = page.getByTestId('webmcp-runtime-panel');
   await expect(panel).toBeVisible();
   await expect(panel.getByRole('heading', { name: '原生 WebMCP 證據面板' })).toBeVisible();
+  await expect(panel).toContainText('Day 15｜Browser runtime observation');
+  await expect(panel).toContainText('Browser API observation');
+  await expect(panel).toContainText(
+    '此清單是 document.modelContext.getTools() 的 Browser observation，不是 Gemini／AI Agent discovery；真實 Agent／Inspector 證據會另行手動記錄。'
+  );
+  await expect(panel).not.toContainText('Day 15｜Agent Discovery');
   await expect(panel).toContainText('document.modelContext 不可用');
   await expect(panel).not.toContainText('已透過 document.modelContext 註冊 search_events');
   await expect(page.getByTestId('native-tool-query')).toHaveValue('前端');
@@ -13,7 +23,7 @@ test('一般瀏覽器未注入 browser test double 時誠實顯示不支援原�
   await expect(panel).toContainText('這是瀏覽器 API 驗證，不是 AI Agent 對話。');
 });
 
-test('注入 document.modelContext browser test double 時顯示 discovery 與直接 invocation 原始證據', async ({ page }) => {
+test('注入 document.modelContext browser test double 時顯示 Browser observation 與直接 invocation 原始證據', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(document, 'modelContext', {
       configurable: true,
@@ -28,8 +38,21 @@ test('注入 document.modelContext browser test double 時顯示 discovery 與�
             }
           ];
         },
-        async executeTool(name: string, input: Record<string, unknown>) {
-          return { status: 'ok', name, input };
+        async executeTool(_name: string, input: Record<string, unknown>) {
+          return {
+            status: 'ok',
+            appliedFilters: input,
+            results: [
+              {
+                eventId: 'evt-frontend-001',
+                title: '前端實作交流會',
+                category: '前端',
+                date: '2026-08-08',
+                location: '台北',
+                summary: 'Browser test double 的搜尋結果。'
+              }
+            ]
+          };
         }
       }
     });
@@ -47,6 +70,24 @@ test('注入 document.modelContext browser test double 時顯示 discovery 與�
   await expect(evidenceLog).toContainText('前端');
   await expect(evidenceLog).toContainText('status');
   await expect(evidenceLog).toContainText('ok');
+  await expect(evidenceLog).toContainText('eventId');
+  await expect(evidenceLog).toContainText('前端實作交流會');
+  await expect(evidenceLog).toContainText('2026-08-08');
+  await expect(evidenceLog).toContainText('台北');
+});
+
+test('受控暫時失敗情境會在直接證據面板顯示 TEMPORARY_UNAVAILABLE', async ({ page }) => {
+  await installRegisteredToolBrowserTestDouble(page);
+  await page.goto('/?evidenceScenario=temporary-unavailable');
+
+  const panel = page.getByTestId('webmcp-runtime-panel');
+  await expect(panel).toContainText('已透過 document.modelContext 註冊 search_events');
+
+  await page.getByTestId('native-tool-invoke').click();
+
+  const evidenceLog = panel.getByTestId('runtime-evidence-log');
+  await expect(evidenceLog).toContainText('前端');
+  await expect(evidenceLog).toContainText('TEMPORARY_UNAVAILABLE');
 });
 
 test('延遲 document.modelContext browser test double 時依序完成註冊再 invocation 並保留輸入與最終證據', async ({ page }) => {
@@ -119,9 +160,22 @@ async function installDelayedModelContextBrowserTestDouble(page: Page): Promise<
             }
           ];
         },
-        async executeTool(name: string, input: Record<string, unknown>) {
+        async executeTool(_name: string, input: Record<string, unknown>) {
           calls.push('executeTool');
-          return { status: 'ok', name, input };
+          return {
+            status: 'ok',
+            appliedFilters: input,
+            results: [
+              {
+                eventId: 'evt-product-001',
+                title: '產品交流會',
+                category: '產品',
+                date: '2026-09-09',
+                location: '林口',
+                summary: '延遲 browser test double 的搜尋結果。'
+              }
+            ]
+          };
         }
       }
     });
@@ -149,4 +203,39 @@ async function releaseRaceGate(
     ).__webMcpRaceControl;
     control[gateName]();
   }, gate);
+}
+
+async function installRegisteredToolBrowserTestDouble(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    type RegisteredTool = {
+      readonly name: string;
+      readonly execute: (input: Record<string, unknown>) => unknown | Promise<unknown>;
+    };
+    let registeredTool: RegisteredTool | undefined;
+
+    Object.defineProperty(document, 'modelContext', {
+      configurable: true,
+      value: {
+        async registerTool(tool: RegisteredTool) {
+          registeredTool = tool;
+        },
+        async getTools() {
+          return registeredTool === undefined
+            ? []
+            : [{
+                name: registeredTool.name,
+                description: '已註冊 Tool 的 browser test double。',
+                inputSchema: '{"type":"object"}'
+              }];
+        },
+        async executeTool(name: string, input: Record<string, unknown>) {
+          if (registeredTool === undefined || name !== registeredTool.name) {
+            throw new Error('browser test double 找不到已註冊的 Tool。');
+          }
+
+          return registeredTool.execute(input);
+        }
+      }
+    });
+  });
 }
