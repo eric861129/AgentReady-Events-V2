@@ -1,4 +1,4 @@
-import { events } from './events';
+import { events, filterEvents } from './events';
 import type { EventCategory, EventItem } from './events';
 
 export type SearchEventsToolInput = {
@@ -84,8 +84,7 @@ export function searchEventsForTool(
     return temporarilyUnavailableResponse;
   }
 
-  const results = (options.events ?? events)
-    .filter((event) => matchesInput(event, input))
+  const results = filterEvents(input, options.events ?? events)
     .map(toToolResultItem);
 
   if (results.length === 0) {
@@ -142,17 +141,6 @@ function isCalendarDate(value: string): boolean {
   return candidate.getUTCFullYear() === Number(year)
     && candidate.getUTCMonth() === Number(month) - 1
     && candidate.getUTCDate() === Number(day);
-}
-
-function matchesInput(event: EventItem, input: SearchEventsToolInput): boolean {
-  const normalizedQuery = input.query.toLocaleLowerCase('zh-Hant');
-  const searchableText = [event.title, event.category, event.location, event.summary]
-    .join(' ')
-    .toLocaleLowerCase('zh-Hant');
-
-  return searchableText.includes(normalizedQuery)
-    && (input.category === undefined || event.category === input.category)
-    && (input.date === undefined || event.date === input.date);
 }
 
 function toToolResultItem(event: EventItem): SearchEventsToolResultItem {

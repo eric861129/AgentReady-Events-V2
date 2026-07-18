@@ -59,10 +59,9 @@
 
 ## Screenshots
 
-- Inspector invocation：`../WEBMCP-iThome-2026-Draft-V2/assets/day-16/inspector-invocation.png`
-- App runtime panel：`../WEBMCP-iThome-2026-Draft-V2/assets/day-16/app-runtime-panel.png`
+- Inspector invocation 的 canonical pending asset、外部素材資料夾界線與 mirror 關係，請依 [Day 16 manual capture asset manifest](day-16-manual-capture-assets.md) 交接。
 
-請在實際取得截圖後確認路徑可追溯；尚未取得時，這兩項僅為預定手動擷取位置，並不表示已有原生觀測證據。
+目前尚未取得原生 Inspector 或 Gemini Agent 證據；不得以 placeholder、Playwright browser test double 或預期輸出替代原生觀測。
 
 ## Notes
 
