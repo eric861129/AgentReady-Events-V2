@@ -66,9 +66,18 @@ WebMCP callback 回傳可解析的 JSON 字串；其邏輯內容固定如下，�
 
 ### 錯誤結果
 
-所有預期失敗都回傳 `status: "error"`，並提供 `code`、可閱讀的 `message` 與下一步 `guidance`。錯誤不以空陣列、未處理例外或猜測性成功代替。
+所有預期失敗都回傳 `status: "error"`，並提供 `errorCode`、可閱讀的 `message` 與下一步 `guidance`。錯誤不以空陣列、未處理例外或猜測性成功代替。
 
-| 情況 | code | guidance |
+```json
+{
+  "status": "error",
+  "errorCode": "INVALID_ARGUMENT",
+  "message": "搜尋活動需要有效的 query。",
+  "guidance": "請提供非空白 query 後再試一次。"
+}
+```
+
+| 情況 | errorCode | guidance |
 | --- | --- | --- |
 | 欄位遺漏、分類無效、日期格式或日期值無效 | `INVALID_ARGUMENT` | 指出可接受格式或值，請 Agent 修正輸入。 |
 | 查詢完成但沒有符合資料 | `NO_RESULTS` | 建議放寬或更換關鍵字；不要求盲目重試。 |
@@ -78,7 +87,7 @@ WebMCP callback 回傳可解析的 JSON 字串；其邏輯內容固定如下，�
 
 ## 元件與資料流
 
-1. `SearchEventsUseCase` 接收驗證後的輸入，套用 query、category、date 篩選，並將 `EventItem` 映射為公開結果。
+1. `filterEvents` 是人類 UI 與 Tool 共用的搜尋 use case，接收輸入後套用 query、category、date 篩選；Tool 再將 `EventItem` 映射為公開結果。
 2. `SearchEventsTool` 將 use case 包裝成符合 `document.modelContext.registerTool()` 的正式定義，保留 `readOnlyHint: true`。
 3. `SearchEventsToolLifecycle` 負責頁面載入時註冊與頁面卸載時 abort；不得覆蓋或取消 Day 12 Lab 的生命週期。
 4. `webmcp/types.ts` 補齊 Chrome 所用的 `getTools()`、`executeTool()` 與 Tool 摘要型別，僅作為原生 API 的 TypeScript 描述，不實作後備 runtime。
