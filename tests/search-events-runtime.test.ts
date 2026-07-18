@@ -97,19 +97,121 @@ describe('SearchEventsRuntime', () => {
       errorMessage: '瀏覽器拒絕註冊 Tool'
     });
   });
+
+  it('註冊失敗後直接呼叫不會執行 Tool 或改寫失敗狀態', async () => {
+    const context = createModelContext({
+      registerError: new Error('瀏覽器拒絕註冊 Tool')
+    });
+    const runtime = new SearchEventsRuntime({ context });
+    const failedRegistration = await runtime.initialize();
+
+    const snapshot = await runtime.invokeForEvidence({ query: '前端' });
+
+    expect(context.executeTool).not.toHaveBeenCalled();
+    expect(snapshot).toEqual(failedRegistration);
+  });
+
+  it('註冊成功但初次發現失敗時中止該次註冊且禁止後續呼叫', async () => {
+    const context = createModelContext({
+      getToolsError: new Error('瀏覽器拒絕發現 Tool')
+    });
+    const runtime = new SearchEventsRuntime({ context });
+
+    const failedDiscovery = await runtime.initialize();
+    const registrationSignal = vi.mocked(context.registerTool).mock.calls[0]?.[1]?.signal;
+    const invocationSnapshot = await runtime.invokeForEvidence({ query: '前端' });
+
+    expect(registrationSignal?.aborted).toBe(true);
+    expect(failedDiscovery).toEqual({
+      availability: 'failed',
+      nativeSupport: true,
+      registrationStatus: 'WebMCP Tool 註冊或發現流程失敗。',
+      discoveredTools: [],
+      errorMessage: '瀏覽器拒絕發現 Tool'
+    });
+    expect(context.executeTool).not.toHaveBeenCalled();
+    expect(invocationSnapshot).toEqual(failedDiscovery);
+  });
+
+  it('成功註冊後呼叫失敗時回傳呼叫流程錯誤', async () => {
+    const context = createModelContext({
+      executeError: new Error('Browser API 拒絕呼叫 Tool')
+    });
+    const runtime = new SearchEventsRuntime({ context });
+    await runtime.initialize();
+
+    await expect(runtime.invokeForEvidence({ query: '前端' })).resolves.toEqual({
+      availability: 'failed',
+      nativeSupport: true,
+      registrationStatus: 'WebMCP Tool 呼叫流程失敗。',
+      discoveredTools,
+      errorMessage: 'Browser API 拒絕呼叫 Tool'
+    });
+  });
+
+  it('直接並行 initialize 與 invocation 時由 Runtime 依序完成', async () => {
+    const registrationGate = createDeferred();
+    const context = createModelContext({ registrationGate: registrationGate.promise });
+    const runtime = new SearchEventsRuntime({ context });
+
+    const initialization = runtime.initialize();
+    const invocation = runtime.invokeForEvidence({ query: '前端' });
+    await vi.waitFor(() => expect(context.registerTool).toHaveBeenCalledOnce());
+
+    expect(context.executeTool).not.toHaveBeenCalled();
+
+    registrationGate.resolve();
+    const [initializationSnapshot, invocationSnapshot] = await Promise.all([
+      initialization,
+      invocation
+    ]);
+
+    expect(initializationSnapshot.availability).toBe('registered');
+    expect(invocationSnapshot.availability).toBe('registered');
+    expect(context.executeTool).toHaveBeenCalledWith('search_events', { query: '前端' });
+  });
 });
 
 function createModelContext(options: {
   readonly executeResult?: unknown;
+  readonly executeError?: Error;
+  readonly getToolsError?: Error;
   readonly registerError?: Error;
+  readonly registrationGate?: Promise<void>;
 } = {}): ModelContext {
   return {
     registerTool: vi.fn().mockImplementation(async () => {
+      await options.registrationGate;
+
       if (options.registerError !== undefined) {
         throw options.registerError;
       }
     }),
-    getTools: vi.fn().mockResolvedValue(discoveredTools),
-    executeTool: vi.fn().mockResolvedValue(options.executeResult)
+    getTools: vi.fn().mockImplementation(async () => {
+      if (options.getToolsError !== undefined) {
+        throw options.getToolsError;
+      }
+
+      return discoveredTools;
+    }),
+    executeTool: vi.fn().mockImplementation(async () => {
+      if (options.executeError !== undefined) {
+        throw options.executeError;
+      }
+
+      return options.executeResult;
+    })
   };
+}
+
+function createDeferred(): {
+  readonly promise: Promise<void>;
+  readonly resolve: () => void;
+} {
+  let resolve = (): void => {};
+  const promise = new Promise<void>((deferredResolve) => {
+    resolve = deferredResolve;
+  });
+
+  return { promise, resolve };
 }

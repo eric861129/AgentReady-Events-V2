@@ -25,7 +25,8 @@ export type SearchEventsRuntimeSnapshot = {
 /** 管理原生 WebMCP search_events Tool 的註冊、發現與呼叫證據。 */
 export class SearchEventsRuntime {
   private activeRegistration?: AbortController;
-  private initializationId = 0;
+  private operationQueue: Promise<void> = Promise.resolve();
+  private registrationSucceeded = false;
   private snapshot: SearchEventsRuntimeSnapshot;
   private readonly context: ModelContext | null;
   private readonly toolOptions?: SearchEventsToolOptions;
@@ -50,27 +51,37 @@ export class SearchEventsRuntime {
   }
 
   async initialize(): Promise<SearchEventsRuntimeSnapshot> {
+    return this.enqueueOperation(() => this.initializeInternal());
+  }
+
+  async invokeForEvidence(
+    input: Record<string, unknown>
+  ): Promise<SearchEventsRuntimeSnapshot> {
+    return this.enqueueOperation(() => this.invokeForEvidenceInternal(input));
+  }
+
+  private async initializeInternal(): Promise<SearchEventsRuntimeSnapshot> {
     if (this.context === null) {
+      this.registrationSucceeded = false;
       this.snapshot = createUnsupportedSnapshot();
       return this.snapshot;
     }
 
     this.activeRegistration?.abort();
     const registration = new AbortController();
-    const currentInitializationId = ++this.initializationId;
     this.activeRegistration = registration;
+    this.registrationSucceeded = false;
+    let registrationCreated = false;
 
     try {
       await this.context.registerTool(
         createSearchEventsTool(this.toolOptions),
         { signal: registration.signal }
       );
+      registrationCreated = true;
       const discoveredTools = await this.context.getTools();
 
-      if (currentInitializationId !== this.initializationId) {
-        return this.snapshot;
-      }
-
+      this.registrationSucceeded = true;
       this.snapshot = {
         availability: 'registered',
         nativeSupport: true,
@@ -79,10 +90,12 @@ export class SearchEventsRuntime {
       };
       return this.snapshot;
     } catch (error) {
-      if (currentInitializationId !== this.initializationId) {
-        return this.snapshot;
+      if (registrationCreated) {
+        registration.abort();
+        this.activeRegistration = undefined;
       }
 
+      this.registrationSucceeded = false;
       this.snapshot = {
         availability: 'failed',
         nativeSupport: true,
@@ -94,10 +107,10 @@ export class SearchEventsRuntime {
     }
   }
 
-  async invokeForEvidence(
+  private async invokeForEvidenceInternal(
     input: Record<string, unknown>
   ): Promise<SearchEventsRuntimeSnapshot> {
-    if (this.context === null) {
+    if (this.context === null || !this.registrationSucceeded) {
       return this.snapshot;
     }
 
@@ -120,12 +133,24 @@ export class SearchEventsRuntime {
       this.snapshot = {
         availability: 'failed',
         nativeSupport: true,
-        registrationStatus: 'WebMCP Tool 註冊或發現流程失敗。',
+        registrationStatus: 'WebMCP Tool 呼叫流程失敗。',
         discoveredTools: this.snapshot.discoveredTools,
         errorMessage: toReadableErrorMessage(error)
       };
       return this.snapshot;
     }
+  }
+
+  private enqueueOperation(
+    operation: () => Promise<SearchEventsRuntimeSnapshot>
+  ): Promise<SearchEventsRuntimeSnapshot> {
+    const result = this.operationQueue.then(operation, operation);
+    this.operationQueue = result.then(
+      () => undefined,
+      () => undefined
+    );
+
+    return result;
   }
 
   private async refreshDiscoveredTools(): Promise<readonly ExposedTool[]> {
