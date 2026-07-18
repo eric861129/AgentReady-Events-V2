@@ -608,7 +608,7 @@ Implementation:
    - `day-18`
 3. Add deterministic screenshots:
    - `day-13/search-events-human-baseline.png`: human UI search result for `前端`.
-   - `day-14/runtime-unsupported.png`: runtime panel in regular Playwright browser showing no native support.
+   - `day-14/search-events-tool-declaration.png`: render the `search_events` declaration source from the exact Day 14 reader ref `day-14-search-events-declaration`; the capture remains code evidence, not runtime or Agent evidence.
    - `day-15/runtime-test-double-discovery.png`: browser-test-double discovery screenshot, labeled in filename and nearby README as test-double evidence only.
    - `day-16/runtime-direct-invocation-test-double.png`: browser-test-double invocation screenshot, labeled as test-double evidence only.
    - `day-18/runtime-temporary-unavailable-test-double.png`: controlled failure screenshot, labeled as test-double evidence only.
