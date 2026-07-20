@@ -67,9 +67,10 @@ npm run build
    root 並只依 native exit code 判定。
 2. 第一輪 `v0.1.0-day-25` browser gate 在前 15 個 tests 通過後，dev web server
    中途退出，最後 3 個 tests 收到 `ERR_CONNECTION_REFUSED`。同一 clone 立即隔離
-   retry 為 18／18 passed；為避免以 retry 掩蓋失敗，又建立第二個全新 clone，從
-   `npm ci` 開始完整五項 gate，最終 18／18 browser passed。表格採用第二個完整
-   fresh-clone run，首敗 log 仍保留。
+   retry 時在 console 觀察到 18／18 passed，但當時沒有另存獨立 retry log，因此這次
+   retry 只作操作性診斷，不是 release evidence。正式 release evidence 只採用第二個
+   全新 clone：從 `npm ci` 開始完整五項 gate，最終 18／18 browser passed。表格採用
+   這個完整 fresh-clone run，首敗 log 仍保留。
 3. 所有 snapshot gate 最終均為 exit code 0；沒有修改 snapshot 內容來迎合 smoke。
 
 ## Publication 與 main 邊界

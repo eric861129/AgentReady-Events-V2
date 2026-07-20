@@ -38,23 +38,39 @@ Day 21–26 各自使用 primary tag fresh clone 啟動 `npm run dev`，所有 H
 Vite `http://127.0.0.1:5173`，不是直接繞到 API port。每次使用新 session cookie，
 並在切換下一日之前確認 5173／8787 listener 已釋放。
 
-| Day | checked at | UI `/` | `POST /api/demo-session` | cookie | `PUT /api/saved-events/event-frontend-summit` |
-| ---: | --- | --- | --- | --- | --- |
-| 21 | 23:21:16 | 200；app root 存在 | 201；`status: ok` | `demo_session` 已保存 | 200；`saved: true, changed: true` |
-| 22 | 23:22:15 | 200；app root 存在 | 201；`status: ok` | `demo_session` 已保存 | 200；`saved: true, changed: true` |
-| 23 | 23:23:23 | 200；app root 存在 | 201；`status: ok` | `demo_session` 已保存 | 200；`saved: true, changed: true` |
-| 24 | 23:24:23 | 200；app root 存在 | 201；`status: ok` | `demo_session` 已保存 | 200；`saved: true, changed: true` |
-| 25 | 23:25:16 | 200；app root 存在 | 201；`status: ok` | `demo_session` 已保存 | 200；`saved: true, changed: true` |
-| 26 | 23:26:29 | 200；app root 存在 | 201；`status: ok` | `demo_session` 已保存 | 200；`saved: true, changed: true` |
+下表不是只記相對 route。每一格都列出 curl 實際送出的 `requestUrl`；raw transcript
+另存 curl 回報的 `effectiveUrl`，六日三個 request 都與 `requestUrl` 完全相同。
+
+| Day | checked at | GET UI requestUrl | POST session requestUrl | PUT save requestUrl |
+| ---: | --- | --- | --- | --- |
+| 21 | 23:52:09 | `http://127.0.0.1:5173/` → 200 | `http://127.0.0.1:5173/api/demo-session` → 201 | `http://127.0.0.1:5173/api/saved-events/event-frontend-summit` → 200 |
+| 22 | 23:52:18 | `http://127.0.0.1:5173/` → 200 | `http://127.0.0.1:5173/api/demo-session` → 201 | `http://127.0.0.1:5173/api/saved-events/event-frontend-summit` → 200 |
+| 23 | 23:52:26 | `http://127.0.0.1:5173/` → 200 | `http://127.0.0.1:5173/api/demo-session` → 201 | `http://127.0.0.1:5173/api/saved-events/event-frontend-summit` → 200 |
+| 24 | 23:52:31 | `http://127.0.0.1:5173/` → 200 | `http://127.0.0.1:5173/api/demo-session` → 201 | `http://127.0.0.1:5173/api/saved-events/event-frontend-summit` → 200 |
+| 25 | 23:52:36 | `http://127.0.0.1:5173/` → 200 | `http://127.0.0.1:5173/api/demo-session` → 201 | `http://127.0.0.1:5173/api/saved-events/event-frontend-summit` → 200 |
+| 26 | 23:52:42 | `http://127.0.0.1:5173/` → 200 | `http://127.0.0.1:5173/api/demo-session` → 201 | `http://127.0.0.1:5173/api/saved-events/event-frontend-summit` → 200 |
+
+六日的 session response 都是 `status: ok`，cookie jar 都包含 `demo_session`；PUT
+response 都是 `saved: true, changed: true`。
 
 原始 response、cookie、dev output 與 `summary.json` 保留於：
 
-`D:\MySelf\iThome-2026\WebMCP\AgentReady-Events-V2-runtime-task11-20260720-232500`
+`D:\MySelf\iThome-2026\WebMCP\AgentReady-Events-V2-runtime-task11-review-20260720-234500`
 
-Runtime harness 完成六日 summary 後卡在最後一個 background job output drain，因此
-終止 harness controller；六日 HTTP assertions 已先持久化，終止後也再次確認
-5173／8787 無 listener。較早兩個被 policy 阻擋的 process-tree cleanup 版本在執行前
-即被拒絕，沒有產生 runtime claim。
+每一日都有以下可稽核 raw artifacts：
+
+- `day-XX-dev.log`：`npm run dev` output 加上三行 `REQUEST`，直接顯示 method、
+  `requestUrl`、`effectiveUrl` 與 status；Day 26 的完整檔案是 `day-26-dev.log`。
+- `day-XX-request-transcript.json`：保存 `baseUrl`、三個 curl command、三組
+  `requestUrl/effectiveUrl/status`。
+- `day-XX-*.headers.txt`、response body 與 cookie jar。
+- `summary.json`：六筆 snapshot SHA、`baseUrl`、個別 request/effective URL、status、
+  response 摘要、transcript 與 dev log path。
+
+六份 dev logs、六份 transcripts 與 headers 皆以 strict UTF-8 解碼並檢查無亂碼；
+coordinator 完成後確認 5173／8787 無 listener。舊的
+`AgentReady-Events-V2-runtime-task11-20260720-232500` 僅保留歷史診斷，不再作本節的
+release evidence。
 
 ## 固定 reviewer gates
 
