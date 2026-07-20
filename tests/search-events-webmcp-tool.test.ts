@@ -1,13 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   createSearchEventsTool,
-  SEARCH_EVENTS_TOOL_NAME
+  SEARCH_EVENTS_TOOL_NAME,
+  type SearchEventsWebMcpToolResultItem
 } from '../src/webmcp/search-events-tool';
 
 describe('createSearchEventsTool', () => {
   const detailUrlFor = (eventId: string): string => (
     `https://events.example.test/?event=${eventId}`
   );
+
+  it('formal WebMCP result item 將 detailUrl 宣告為必填 string', () => {
+    expectTypeOf<SearchEventsWebMcpToolResultItem>().toMatchTypeOf<{
+      readonly detailUrl: string;
+    }>();
+  });
 
   it('exposes the formal read-only search_events contract', () => {
     const tool = createSearchEventsTool({ detailUrlFor });

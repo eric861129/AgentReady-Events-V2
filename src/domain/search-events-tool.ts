@@ -19,7 +19,6 @@ export type SearchEventsToolResultItem = {
   readonly date: string;
   readonly location: string;
   readonly summary: string;
-  readonly detailUrl?: string;
 };
 
 export type SearchEventsToolSuccess = {

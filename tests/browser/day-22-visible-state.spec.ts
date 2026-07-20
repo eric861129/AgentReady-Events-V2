@@ -40,16 +40,16 @@ test('Day 22：人類收藏、重載、取消與復原都以 server state 同步
   const eventCard = page.locator(`[data-event-id="${eventId}"]`);
   await expect(eventCard.getByRole('button', { name: '收藏活動' })).toBeVisible();
   await expect(page.getByTestId('saved-events-list')).toContainText('尚未收藏任何活動');
-  await eventCard.getByRole('button', { name: '查看詳情' }).click();
+  await eventCard.getByRole('link', { name: '查看詳情' }).click();
   await expect(page.getByTestId('event-detail-saved-state')).toContainText('尚未收藏');
-  await page.getByRole('button', { name: '關閉詳情' }).click();
+  await page.getByRole('link', { name: '關閉詳情' }).click();
 
   await eventCard.getByRole('button', { name: '收藏活動' }).click();
   await expect(eventCard.getByRole('button', { name: '已收藏' })).toBeVisible();
   await expect(page.getByTestId('saved-events-list')).toContainText(eventTitle);
-  await eventCard.getByRole('button', { name: '查看詳情' }).click();
+  await eventCard.getByRole('link', { name: '查看詳情' }).click();
   await expect(page.getByTestId('event-detail-saved-state')).toContainText('已收藏');
-  await page.getByRole('button', { name: '關閉詳情' }).click();
+  await page.getByRole('link', { name: '關閉詳情' }).click();
 
   await page.reload();
   await expect(page.locator(`[data-event-id="${eventId}"]`).getByRole('button', { name: '已收藏' })).toBeVisible();
@@ -59,9 +59,9 @@ test('Day 22：人類收藏、重載、取消與復原都以 server state 同步
   await expect(page.locator(`[data-event-id="${eventId}"]`).getByRole('button', { name: '收藏活動' })).toBeVisible();
   await expect(page.getByTestId('saved-events-undo')).toBeVisible();
   expect(savedEventsMutationMethods).toContain('DELETE');
-  await page.locator(`[data-event-id="${eventId}"]`).getByRole('button', { name: '查看詳情' }).click();
+  await page.locator(`[data-event-id="${eventId}"]`).getByRole('link', { name: '查看詳情' }).click();
   await expect(page.getByTestId('event-detail-saved-state')).toContainText('尚未收藏');
-  await page.getByRole('button', { name: '關閉詳情' }).click();
+  await page.getByRole('link', { name: '關閉詳情' }).click();
 
   await page.getByTestId('saved-events-undo').click();
   await expect(page.locator(`[data-event-id="${eventId}"]`).getByRole('button', { name: '已收藏' })).toBeVisible();
@@ -80,7 +80,7 @@ test('browser test double：save_event 成功後同步活動卡、詳情與收�
   await establishEmptySavedEventsState(page);
 
   const eventCard = page.locator(`[data-event-id="${eventId}"]`);
-  await eventCard.getByRole('button', { name: '查看詳情' }).click();
+  await eventCard.getByRole('link', { name: '查看詳情' }).click();
   await expect.poll(() => readRegisteredToolNames(page)).toContain('save_event');
 
   const rawResponse = await page.evaluate(async (id) => {

@@ -19,7 +19,7 @@ test('宣告式 Lab 顯示標註表單與非 Agent 的結構預覽', async ({ pa
 test('不支援 WebMCP 的瀏覽器不會把詳情對話框說成已註冊 Tool', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByRole('button', { name: '查看詳情' }).first().click();
+  await page.getByRole('link', { name: '查看詳情' }).first().click();
 
   const status = page.getByTestId('imperative-lab-status');
   await expect(status).toContainText('此瀏覽器未提供 WebMCP');

@@ -105,7 +105,7 @@ test('browser test double：save_event 只在活動詳情顯示，且同一活�
   }, 'event-frontend-summit');
 
   await page.locator('[data-event-id="event-frontend-summit"]')
-    .getByRole('button', { name: '查看詳情' })
+    .getByRole('link', { name: '查看詳情' })
     .click();
 
   await expect.poll(() => readRegisteredToolNames(page)).toContain('save_event');
@@ -153,7 +153,7 @@ test('browser test double：延遲 Demo session 完成後不會把已開啟詳�
   await expect.poll(() => readDemoSessionState(page)).toMatchObject({ started: true });
 
   await page.locator('[data-event-id="event-frontend-summit"]')
-    .getByRole('button', { name: '查看詳情' })
+    .getByRole('link', { name: '查看詳情' })
     .click();
   await expect.poll(() => readRegisteredToolNames(page)).toEqual([
     'get_event_details',

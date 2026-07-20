@@ -1,6 +1,7 @@
 import {
   searchEventsForTool,
-  type SearchEventsToolOptions
+  type SearchEventsToolOptions,
+  type SearchEventsToolResultItem
 } from '../domain/search-events-tool';
 import type { WebMcpToolDefinition } from './types';
 
@@ -10,6 +11,10 @@ export interface SearchEventsWebMcpToolOptions extends SearchEventsToolOptions {
   /** 將 canonical eventId 映射為目前網站的活動詳情網址。 */
   readonly detailUrlFor: (eventId: string) => string;
 }
+
+export type SearchEventsWebMcpToolResultItem = SearchEventsToolResultItem & {
+  readonly detailUrl: string;
+};
 
 export function createSearchEventsTool(
   options: SearchEventsWebMcpToolOptions
@@ -48,11 +53,18 @@ export function createSearchEventsTool(
         ? result
         : {
             ...result,
-            results: result.results.map((event) => ({
-              ...event,
-              detailUrl: detailUrlFor(event.eventId)
-            }))
+            results: result.results.map((event) => toWebMcpResultItem(event, detailUrlFor))
           });
     }
+  };
+}
+
+function toWebMcpResultItem(
+  event: SearchEventsToolResultItem,
+  detailUrlFor: (eventId: string) => string
+): SearchEventsWebMcpToolResultItem {
+  return {
+    ...event,
+    detailUrl: detailUrlFor(event.eventId)
   };
 }

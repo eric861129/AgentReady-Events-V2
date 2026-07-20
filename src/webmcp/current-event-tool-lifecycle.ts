@@ -17,6 +17,7 @@ const routeMismatchResponse = {
 export interface CurrentEventToolLifecycleDependencies {
   readonly adapter: WebMcpAdapter;
   readonly createSearchTool: () => WebMcpToolDefinition;
+  readonly getCurrentRoute: () => EventRoute;
   readonly getEventDetails: (eventId: string) => EventItem | undefined | Promise<EventItem | undefined>;
   readonly saveEventUseCase: SaveEventUseCase;
   readonly onSaveSuccess?: () => Promise<void> | void;
@@ -24,7 +25,15 @@ export interface CurrentEventToolLifecycleDependencies {
 
 /** 依目前活動 route 替換文件所暴露的正式 WebMCP Tool。 */
 export class CurrentEventToolLifecycle {
+  private generation = 0;
+
   public constructor(private readonly dependencies: CurrentEventToolLifecycleDependencies) {}
+
+  /** route 一變更就同步失效舊 handler，不等待非同步 replacement queue。 */
+  public invalidate(): void {
+    this.generation += 1;
+    this.dependencies.adapter.clearTools();
+  }
 
   public async sync(route: EventRoute): Promise<void> {
     if (route.kind === 'search') {
@@ -41,11 +50,22 @@ export class CurrentEventToolLifecycle {
       return;
     }
 
+    const generation = this.generation;
+    const isCurrentRoute = (): boolean => (
+      generation === this.generation
+      && isCurrentDetailRoute(this.dependencies.getCurrentRoute(), route.eventId)
+    );
+
     await this.dependencies.adapter.replaceTools([
-      createGetEventDetailsTool(route.eventId, this.dependencies.getEventDetails),
+      createGetEventDetailsTool(
+        route.eventId,
+        this.dependencies.getEventDetails,
+        isCurrentRoute
+      ),
       createRouteScopedSaveEventTool(
         route.eventId,
         this.dependencies.saveEventUseCase,
+        isCurrentRoute,
         this.dependencies.onSaveSuccess
       )
     ]);
@@ -54,7 +74,8 @@ export class CurrentEventToolLifecycle {
 
 function createGetEventDetailsTool(
   routeEventId: string,
-  getEventDetails: CurrentEventToolLifecycleDependencies['getEventDetails']
+  getEventDetails: CurrentEventToolLifecycleDependencies['getEventDetails'],
+  isCurrentRoute: () => boolean
 ): WebMcpToolDefinition {
   return {
     name: GET_EVENT_DETAILS_TOOL_NAME,
@@ -62,7 +83,7 @@ function createGetEventDetailsTool(
     inputSchema: createEventIdInputSchema(),
     annotations: { readOnlyHint: true },
     async execute(input) {
-      if (!matchesRoute(input, routeEventId)) {
+      if (!isCurrentRoute() || !matchesRoute(input, routeEventId)) {
         return JSON.stringify(routeMismatchResponse);
       }
 
@@ -95,6 +116,7 @@ function createGetEventDetailsTool(
 function createRouteScopedSaveEventTool(
   routeEventId: string,
   useCase: SaveEventUseCase,
+  isCurrentRoute: () => boolean,
   onSaveSuccess?: () => Promise<void> | void
 ): WebMcpToolDefinition {
   const saveEventTool = createSaveEventTool(useCase, { onSaveSuccess });
@@ -102,7 +124,7 @@ function createRouteScopedSaveEventTool(
   return {
     ...saveEventTool,
     async execute(input) {
-      if (!matchesRoute(input, routeEventId)) {
+      if (!isCurrentRoute() || !matchesRoute(input, routeEventId)) {
         return JSON.stringify(routeMismatchResponse);
       }
 
@@ -130,4 +152,8 @@ function matchesRoute(input: unknown, routeEventId: string): boolean {
     && input !== null
     && !Array.isArray(input)
     && (input as Record<string, unknown>).eventId === routeEventId;
+}
+
+function isCurrentDetailRoute(route: EventRoute, eventId: string): boolean {
+  return route.kind === 'detail' && route.eventId === eventId;
 }

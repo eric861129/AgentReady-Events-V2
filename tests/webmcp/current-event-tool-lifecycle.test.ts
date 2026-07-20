@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { SaveEventUseCase } from '../../src/application/save-event';
+import { createSaveEventUseCase, type SaveEventUseCase } from '../../src/application/save-event';
+import type { SavedEventsApi } from '../../src/client/saved-events-api';
+import type { EventRoute } from '../../src/client/event-route';
 import type { EventItem } from '../../src/domain/events';
 import {
   CurrentEventToolLifecycle,
@@ -87,12 +89,63 @@ describe('CurrentEventToolLifecycle', () => {
     expect(getEventDetails).toHaveBeenCalledWith(event.id);
     expect(saveEventUseCase.execute).toHaveBeenCalledWith({ eventId: event.id });
   });
+
+  it('detail 轉 search 時立即讓 stale save handler 失效，不等待延遲 replacement', async () => {
+    const routeState: { current: EventRoute } = {
+      current: { kind: 'detail', eventId: event.id }
+    };
+    const api: SavedEventsApi = {
+      createDemoSession: vi.fn().mockResolvedValue(undefined),
+      listSavedEventIds: vi.fn().mockResolvedValue([]),
+      saveEvent: vi.fn().mockResolvedValue({
+        status: 'ok',
+        eventId: event.id,
+        saved: true,
+        changed: true
+      }),
+      removeEvent: vi.fn()
+    };
+    const saveEventUseCase = createSaveEventUseCase({
+      api,
+      getCurrentRoute: () => routeState.current.kind === 'detail'
+        ? { eventId: routeState.current.eventId }
+        : null
+    });
+    const getEventDetails = vi.fn().mockReturnValue(event);
+    const delayed = createDelayedSecondReplacementAdapter();
+    const lifecycle = createLifecycle(delayed.adapter, {
+      getEventDetails,
+      getCurrentRoute: () => routeState.current,
+      saveEventUseCase
+    });
+    await lifecycle.sync(routeState.current);
+    const staleDetailsTool = delayed.readActiveTools().find(
+      (tool) => tool.name === 'get_event_details'
+    );
+    const staleSaveTool = delayed.readActiveTools().find((tool) => tool.name === 'save_event');
+
+    routeState.current = { kind: 'search' };
+    lifecycle.invalidate();
+    const searchSync = lifecycle.sync(routeState.current);
+    await vi.waitFor(() => expect(delayed.adapter.replaceTools).toHaveBeenCalledTimes(2));
+
+    expect(delayed.adapter.clearTools).toHaveBeenCalledOnce();
+    await expectToolError(staleDetailsTool, { eventId: event.id }, 'ROUTE_MISMATCH');
+    await expectToolError(staleSaveTool, { eventId: event.id }, 'ROUTE_MISMATCH');
+    expect(getEventDetails).not.toHaveBeenCalled();
+    expect(api.saveEvent).not.toHaveBeenCalled();
+
+    delayed.releaseReplacement();
+    await searchSync;
+    expect(toolNames(delayed.readActiveTools())).toEqual(['search_events']);
+  });
 });
 
 function createLifecycle(
   adapter: WebMcpAdapter,
   overrides: {
     readonly getEventDetails?: (eventId: string) => EventItem | undefined;
+    readonly getCurrentRoute?: () => EventRoute;
     readonly saveEventUseCase?: SaveEventUseCase;
   } = {}
 ): CurrentEventToolLifecycle {
@@ -100,6 +153,10 @@ function createLifecycle(
     adapter,
     createSearchTool: () => createNamedTool('search_events'),
     getEventDetails: overrides.getEventDetails ?? (() => event),
+    getCurrentRoute: overrides.getCurrentRoute ?? (() => ({
+      kind: 'detail',
+      eventId: event.id
+    })),
     saveEventUseCase: overrides.saveEventUseCase ?? {
       execute: vi.fn().mockResolvedValue({
         status: 'ok',
@@ -109,6 +166,39 @@ function createLifecycle(
       })
     }
   });
+}
+
+function createDelayedSecondReplacementAdapter(): {
+  readonly adapter: WebMcpAdapter;
+  readonly readActiveTools: () => readonly WebMcpToolDefinition[];
+  readonly releaseReplacement: () => void;
+} {
+  let activeTools: readonly WebMcpToolDefinition[] = [];
+  let replacementCount = 0;
+  let releaseReplacement = (): void => {};
+  const replacementGate = new Promise<void>((resolve) => {
+    releaseReplacement = resolve;
+  });
+  const adapter: WebMcpAdapter = {
+    replaceTools: vi.fn().mockImplementation(async (tools: readonly WebMcpToolDefinition[]) => {
+      replacementCount += 1;
+
+      if (replacementCount === 2) {
+        await replacementGate;
+      }
+
+      activeTools = [...tools];
+    }),
+    clearTools: vi.fn().mockImplementation(() => {
+      activeTools = [];
+    })
+  };
+
+  return {
+    adapter,
+    readActiveTools: () => activeTools,
+    releaseReplacement
+  };
 }
 
 function createObservableAdapter(): {

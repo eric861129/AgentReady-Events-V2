@@ -23,8 +23,11 @@ https://events.example.test/?event=evt-frontend-2026
 | `?event=event-frontend-summit` | 已知活動詳情 | `get_event_details`、`save_event` |
 | `?event=<unknown>` | not-found | 無 |
 
-route 切換透過 `replaceTools()` 中止舊 registration，再以完整的新清單註冊。
-從詳情回到搜尋頁後，不會殘留 `get_event_details` 或 `save_event`。
+route 切換會先同步呼叫 lifecycle `invalidate()`：立即中止舊 registration，並推進
+generation token；排入既有 Promise queue 的 `replaceTools()` 隨後才註冊完整新清單。
+詳情 Tool invocation 同時比對 generation 與 live route，因此即使 replacement 被延遲，
+stale handler 也只能回 `ROUTE_MISMATCH`。從詳情回到搜尋頁後，最終不會殘留
+`get_event_details` 或 `save_event`。
 
 `get_event_details` 與 `save_event` 都先比對 input `eventId` 與目前 detail route。
 不相符時立即回傳：
@@ -77,8 +80,25 @@ npm run build
 
 2026-07-20 提交前 fresh gate：
 
-- `npm test`：17 test files、74 passed。
+- `npm test`：17 test files、76 passed。
 - `npm run test:browser -- --grep "Day 24"`：2 passed。
 - `npm run test:browser`：15 passed。
 - `npm run typecheck`：passed。
 - `npm run build`：typecheck 與 Vite production build passed；19 modules transformed。
+
+## Review correction：stale handler、required type 與 link semantics
+
+reviewer 指出 detail → search 的同文件 transition 可能在 queued replacement 完成前，
+讓呼叫端持有舊的詳情 Tool object。修正後：
+
+- route change 當下同步 `clearTools()` 並增加 generation，不等待 replacement queue。
+- `get_event_details` 與 `save_event` 都以建立時 generation 加 live route getter 驗證；
+  已過時時，即使 input 仍是原 detail event ID，也回 `ROUTE_MISMATCH`。
+- 延遲第二次 `replaceTools()` 的 regression 直接呼叫 stale handler，驗證詳情 dependency
+  與真實 `createSaveEventUseCase` 的 `api.saveEvent` 都是 0 次；release 後 active list
+  只有 `search_events`。
+- domain `SearchEventsToolResultItem` 維持純 event data；正式 WebMCP 邊界另以
+  `SearchEventsWebMcpToolResultItem` 宣告必填 `detailUrl: string`，mapper 回傳型別也受此
+  contract 約束。
+- 可導覽詳情與關閉入口維持原生 `<a>` 語意，不再標示 `role="button"`；browser tests
+  與 screenshot capture locator 改以 link role 操作。

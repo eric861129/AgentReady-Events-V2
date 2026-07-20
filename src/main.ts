@@ -72,6 +72,7 @@ const currentEventToolLifecycle = new CurrentEventToolLifecycle({
     detailUrlFor,
     isTemporarilyUnavailable: () => temporaryFailureEvidenceScenario
   }),
+  getCurrentRoute: () => eventRoute,
   getEventDetails: findEventById,
   saveEventUseCase,
   onSaveSuccess: synchronizeSavedEventsAfterToolInvocation
@@ -215,7 +216,7 @@ function renderEventCard(event: EventItem): string {
       <p>${event.summary}</p>
       <p class="event-card__location">${event.location}</p>
       <div class="event-card__actions">
-        <a class="event-card__detail" role="button" href="${escapeHtml(detailUrl)}" data-action="detail" data-event-id="${event.id}">查看詳情</a>
+        <a class="event-card__detail" href="${escapeHtml(detailUrl)}" data-action="detail" data-event-id="${event.id}">查看詳情</a>
         <button type="button" data-action="save" data-event-id="${event.id}" aria-pressed="${isSaved}" ${isSaved ? 'disabled' : ''}>${saveLabel}</button>
       </div>
     </article>
@@ -287,7 +288,7 @@ function renderEventDetail(): string {
   return `
     <div class="dialog-backdrop">
       <section class="event-dialog" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title">
-        <a class="dialog-close" role="button" href="/" data-action="close-detail" aria-label="關閉詳情">×</a>
+        <a class="dialog-close" href="/" data-action="close-detail" aria-label="關閉詳情">×</a>
         <p class="section-label">${selectedEvent.category}｜${formatDate(selectedEvent.date)}</p>
         <h2 id="event-dialog-title">${selectedEvent.title}</h2>
         <p>${selectedEvent.summary}</p>
@@ -511,6 +512,7 @@ appRoot.addEventListener('click', (event) => {
     const targetUrl = new URL(actionElement.href);
     window.history.pushState(null, '', targetUrl);
     eventRoute = readEventRoute(targetUrl.search);
+    currentEventToolLifecycle.invalidate();
     synchronizeWebMcpTools();
     render();
 
@@ -538,6 +540,7 @@ appRoot.addEventListener('click', (event) => {
 
 window.addEventListener('popstate', () => {
   eventRoute = readEventRoute(window.location.search);
+  currentEventToolLifecycle.invalidate();
   synchronizeWebMcpTools();
   render();
 });

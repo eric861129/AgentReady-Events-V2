@@ -85,7 +85,7 @@ try {
     path: path.join(assetDirectory, 'day-11', 'declarative-lab.png')
   });
 
-  await page.getByRole('button', { name: '查看詳情' }).click();
+  await page.getByRole('link', { name: '查看詳情' }).click();
   await page.getByRole('dialog').waitFor();
   await page.screenshot({ path: path.join(assetDirectory, 'day-03', 'event-detail.png'), fullPage: true });
   await page.getByRole('dialog').screenshot({
