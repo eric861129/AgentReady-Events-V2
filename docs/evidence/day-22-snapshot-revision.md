@@ -64,10 +64,11 @@ Day 22 第一次修訂後的正式 reader branch `day-22-visible-tool-state` 與
 
 後續 re-review 確認最小 Demo API 有意使用唯一的 `demo-reader` principal。正常 Playwright browser suite 若並行執行，測試會共享同一份 server-side 收藏 state，因而可能產生不穩定的測試結果；這是 test isolation 問題，不應透過新增 test-only identity 或擴張授權模型解決。
 
-修正程式位於 commit `64b109551268e24532fe1b7cab661ea2e1232b7d`：
+修正程式位於 commits `64b109551268e24532fe1b7cab661ea2e1232b7d` 與 `5518ed58f14d311b1f4e297692ccfa5365e8709f`：
 
 - `playwright.config.ts` 僅針對一般 `tests/browser` suite 設定 `workers: 1`。
 - `tests/playwright-config.test.ts` 鎖定此設定與固定 principal 的理由。
+- Day 22 stateful browser regressions 在每次結束後清除其測試 event 的 saved-state fixture，讓同一 worker 的後續測試取得穩定基線。
 - `playwright.button-copy-experiment.config.ts` 不變；沒有修改 API identity、認證或 Day 23/24 功能。
 
 第一次修訂 snapshot 永久保留於：

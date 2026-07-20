@@ -27,6 +27,8 @@
 
 由於最小 Demo API 刻意只提供固定的 `demo-reader` principal，標準 `playwright.config.ts` 將一般 browser suite 固定為 `workers: 1`。這避免不同 browser test 的 session 共用同一份收藏 state；獨立 `playwright.button-copy-experiment.config.ts` 沒有繼承此設定。
 
+Day 22 的三個 stateful browser regressions 另以 `afterEach` 清除測試 event 的收藏基線，避免同一 worker 的後續既有測試讀到 fixture 殘留。這是 test cleanup，不是使用者流程、身份模型或 native Agent 證據。
+
 執行結果：
 
 ```text
