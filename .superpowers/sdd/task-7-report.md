@@ -65,3 +65,36 @@ git clone --no-local --single-branch --branch day-23-shared-use-case `
 | full `npm test` | 14 files, 65 passed |
 | `npm run test:browser` | 13 passed |
 | `npm run build` | passed; Vite completed in 181 ms |
+
+## Day23 controlled snapshot correction（2026-07-20）
+
+### Ref outcome
+
+| Ref | Final target |
+| --- | --- |
+| old formal branch/tag | `day-23-shared-use-case` / `v0.1.0-day-23` originally peeled to `e29e30182179af45d4fa4a7afd3c8aeac7abe040` |
+| pre-review archive branch | `archive/day-23-shared-use-case-pre-review` → `e29e30182179af45d4fa4a7afd3c8aeac7abe040` |
+| pre-review annotated tag | `v0.1.0-day-23-pre-review` → `e29e30182179af45d4fa4a7afd3c8aeac7abe040` |
+| corrected formal branch | `day-23-shared-use-case` → `d9d1c8dd129c7bf3b94349e480d10bd0e8e531e2` |
+| corrected formal tag peeled SHA | `v0.1.0-day-23^0` → `d9d1c8dd129c7bf3b94349e480d10bd0e8e531e2` |
+
+`d9d1c8d` contains the `c6f28c8` caller-result contract fix, versioning policy correction, and Day23 snapshot-revision evidence. Day1–22 existing formal refs were not changed; Day20 only gained the new canonical `day-20-human-in-the-loop` branch at its existing tag peeled SHA `1e1fcde0e3212ced1c724b782d6e5231eac416d0`.
+
+### Corrected formal tag fresh clone
+
+```powershell
+git clone --no-local --single-branch --branch v0.1.0-day-23 `
+  D:\MySelf\iThome-2026\WebMCP\AgentReady-Events-V2-day19-26 `
+  C:\Users\ERICHU~1\AppData\Local\Temp\agent-ready-events-v2-day23-corrected-20260720210754\repository
+```
+
+| Gate | Result |
+| --- | --- |
+| formal branch SHA | `d9d1c8dd129c7bf3b94349e480d10bd0e8e531e2` |
+| tag peeled SHA | `d9d1c8dd129c7bf3b94349e480d10bd0e8e531e2` |
+| clone HEAD | `d9d1c8dd129c7bf3b94349e480d10bd0e8e531e2` |
+| `npm ci` | 80 packages added; 0 vulnerabilities |
+| `npm run typecheck` | passed |
+| full `npm test` | 14 files, 64 passed |
+| `npm run test:browser` | 13 passed |
+| `npm run build` | passed; Vite completed in 143 ms |
