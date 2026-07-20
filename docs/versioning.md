@@ -45,6 +45,16 @@ Day 1–18 的 SHA 僅作歷史紀錄與追溯用途；本階段不修改任何�
 
 Day 21 曾因審查發現的缺陷進行一次經授權的快照修訂；Day 22 已進行兩次經授權的快照修訂；Day23 依 reviewer 的 caller-result contract 修正進行一次受控修訂。每次原 reader branch/tag 對應的 commit 都以獨立 archive branch 與 annotated archive tag 保存；修訂目的、邊界與 fresh clone 驗收規則見 [Day 21 快照修訂紀錄](evidence/day-21-snapshot-revision.md)、[Day 22 快照修訂紀錄](evidence/day-22-snapshot-revision.md) 與 [Day 23 快照修訂紀錄](evidence/day-23-snapshot-revision.md)。此例外不授權修改 Day 1–22 的既有 ref；Day20 新增 canonical branch 也不移動既有 tag 或 compatibility alias。
 
+Day 25 與 Day 26 在文章尚未對外發布前，發現 Day 25 browser journey attachment 的
+`rawOutput` 曾由 parsed object 重新序列化，無法誠實保存原始 Tool transport string。
+這是預發布證據修正，不是功能擴張：先封存原 Day 25 的 `e8a0590` 與原 Day 26 的
+`fb07f4a`，再以精確 lease 移動兩日的正式 branch 與 annotated tag。封存 ref 分別為
+`archive/day-25-agent-journey-pre-raw-evidence`／
+`v0.1.0-day-25-pre-raw-evidence`，以及
+`archive/day-26-server-authorization-pre-raw-evidence`／
+`v0.1.0-day-26-pre-raw-evidence`。此例外只適用於 2026-08-01 前的本次修正；正式發布後
+不得再移動 reader ref。
+
 Day 19–26 的 reader clone、五項 gate、失敗處理與完整 SHA 見
 [reader snapshot smoke 紀錄](evidence/reader-snapshot-smoke-day-19-to-day-26.md)；
 各日 HTTP、browser test double、真實 Demo API 與原生 Chrome 證據邊界見
@@ -90,8 +100,8 @@ git clone --single-branch --branch day-20-human-in-the-loop <repository-url>
 | 22 | `day-22-visible-tool-state` | `v0.1.0-day-22` | 已第二次修訂並封存前快照 |
 | 23 | `day-23-shared-use-case` | `v0.1.0-day-23` | 已受控修訂；pre-review snapshot 已封存 |
 | 24 | `day-24-tool-lifecycle` | `v0.1.0-day-24` | 已發布；`eb023c5` |
-| 25 | `day-25-agent-journey` | `v0.1.0-day-25` | 已發布；`e8a0590` |
-| 26 | `day-26-server-authorization` | `v0.1.0-day-26` | 已發布；`fb07f4a` |
+| 25 | `day-25-agent-journey` | `v0.1.0-day-25` | 預發布重發行；`f071bf2`，原 `e8a0590` 已封存 |
+| 26 | `day-26-server-authorization` | `v0.1.0-day-26` | 預發布重發行；`ecf9082`，原 `fb07f4a` 已封存 |
 | 27 | `day-27-tool-tests` | `v0.1.0-day-27` | 待建立 |
 | 28 | `day-28-ui-change-comparison` | `v0.1.0-day-28` | 待建立 |
 | 29 | `day-29-agent-ready-evidence` | `v0.1.0-day-29` | 待建立 |

@@ -61,6 +61,17 @@ npm.cmd exec playwright test tests/browser/day-26-trusted-boundary.spec.ts
 
 由於拒絕行為原本已存在，另做可逆 mutation check 確認證據確實能攔截回歸：暫時關閉 `userId` 拒絕與 route mismatch guard 時，Vitest 出現 4 個預期失敗，Day 26 Playwright 也因收到 `200 ok` 而失敗；還原 production code 後，18 個 focused tests 與 Day 26 browser test 全數恢復通過。最終 production diff 為空。
 
-## 延後項目
+## Reader snapshot 與文章邊界
 
-依本輪交付決策，Day 24–26 reader snapshots、reader branch/tag、最終文章截圖與文章內容會在三日實作完成後統一建立。本次沒有修改外部 `WEBMCP-iThome-2026-Draft-V2/ArticleBriefs.md`，也沒有建立或推送 Day 26 reader branch/tag；最終文章階段必須再以本文件的三個 server 拒絕 case 與一個 client early-stop case 對齊文章敘述。
+Day 26 reader snapshot 已在文章對外發布前重發行：annotated tag
+`v0.1.0-day-26` 與 convenience branch `day-26-server-authorization` 都指向
+`ecf9082ccc9caba9538a65acee2a3f0cf52c88bf`。它包含 Day 25 對 raw Tool transport
+string 的證據修正，以及 Day 26 原有的 server boundary tests。原本的
+`fb07f4a0f784be25b9f66f58fd1fe4e77e7c4c02` 同時保留在
+`archive/day-26-server-authorization-pre-raw-evidence` 與 annotated tag
+`v0.1.0-day-26-pre-raw-evidence`。
+
+2026-07-21 遠端 formal tag fresh clone 的整體 gate 為：Vitest 18 test files／85 tests
+passed、Playwright 19 passed、typecheck 與 Vite build passed（19 modules transformed）。
+外部文章必須以本文件的三個 server 拒絕 case 與一個 client early-stop case 對齊敘述，
+且不得把 Demo API evidence 寫成 production authorization audit。

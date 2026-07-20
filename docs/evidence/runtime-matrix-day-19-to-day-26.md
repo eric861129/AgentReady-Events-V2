@@ -1,6 +1,6 @@
 # Day 19–26 runtime evidence matrix
 
-> 取證日期：2026-07-20（Asia/Taipei）
+> 取證日期：2026-07-20（Asia/Taipei）；Day 25／26 預發布證據修正：2026-07-21
 >
 > 原則：native Chrome、browser test double、真實 Demo API 與純 HTTP tests 不互相替代。
 
@@ -24,13 +24,19 @@
 | 22 | `93b813e` | 收藏 state hydration／同步；61 unit passed | 13 passed；包含真實 Demo API UI state 與 test double Tool save | 未執行 |
 | 23 | `d9d1c8d` | UI／Tool 共用 save use case；64 unit passed | 13 passed；共用行為 regression | 未執行 |
 | 24 | `eb023c5` | `detailUrl`、route lifecycle、stale handler 與 mismatch no-HTTP；76 unit passed | 15 passed；Day 24 JSON attachment 是 browser test double | 未執行 |
-| 25 | `e8a0590` | 完整 journey、empty／error／mismatch／non-changing save 停止條件；82 unit passed | 18 passed；完整 journey attachment 明確是 browser test double | `UNSUPPORTED_FOR_THIS_EVIDENCE_RUN` |
-| 26 | `fb07f4a` | 84 unit passed；server tests 驗證 401／400／404、`errorCode` 與 collection 不變 | 19 passed；Day 26 測試使用真實 Demo API，沒有安裝 WebMCP test double | 未執行 |
+| 25 | `f071bf2` | 完整 journey、empty／error／mismatch／non-changing save 停止條件；83 unit passed；attachment 原樣保存 Tool transport string | 18 passed；完整 journey attachment 明確是 browser test double | `UNSUPPORTED_FOR_THIS_EVIDENCE_RUN` |
+| 26 | `ecf9082` | 85 unit passed；server tests 驗證 401／400／404、`errorCode` 與 collection 不變；包含 Day 25 raw evidence 修正 | 19 passed；Day 26 測試使用真實 Demo API，沒有安裝 WebMCP test double | 未執行 |
 
 Day 25 的 native 狀態詳見
 [`day-25-native-observation.md`](./day-25-native-observation.md)。Day 26 的 DOM
 修改只建立「畫面不是 source of truth」的反例；成功或拒絕仍以 API response 與
 session state 判定。
+
+Day 25／26 的修正只改變 journey attachment 如何保存 `rawOutput`，不改變畫面、
+Demo API 或 native observation。因此既有截圖與 Vite proxy 原始 HTTP artifacts 無須重擷取；
+其原始 snapshot 仍可由 `*-pre-raw-evidence` archive ref 取得，正式 reader ref 的
+目前 mapping 與 fresh-clone gate 另見
+[`reader-snapshot-smoke-day-19-to-day-26.md`](./reader-snapshot-smoke-day-19-to-day-26.md)。
 
 ## `npm run dev`／Vite proxy smoke
 

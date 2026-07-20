@@ -99,8 +99,13 @@ Tool response string 的 browser test-double 證據，不是原生 Agent 或文�
 [`day-25-native-observation.md`](./day-25-native-observation.md)，目前誠實標示為
 `UNSUPPORTED_FOR_THIS_EVIDENCE_RUN`；這不是宣稱 Chrome 本身不支援 WebMCP。
 
-依 Day 24–26 統一交付決策，本次不建立 Day 25 reader branch/tag，不產生文章用最終
-screenshot；正式 reader snapshots、最終截圖與文章延後至 Day 26 完成後一起建立。
+Day 25 reader snapshot 已在文章對外發布前重發行：annotated tag
+`v0.1.0-day-25` 與 convenience branch `day-25-agent-journey` 都指向
+`f071bf2af29056db800bbacb25b54035bd453de2`。原本的
+`e8a0590a9ed2faba6f871b53fedcf48f280272af` 同時保留在
+`archive/day-25-agent-journey-pre-raw-evidence` 與 annotated tag
+`v0.1.0-day-25-pre-raw-evidence`；這是預發布的 evidence correction，不是原生
+Chrome／Agent 證據，也不是功能修改。
 
 ## 重現命令
 
@@ -113,11 +118,11 @@ npm run typecheck
 npm run build
 ```
 
-2026-07-20 review correction 後 fresh gate：
+2026-07-21 預發布重發行後，以遠端 formal tag fresh clone 的 gate：
 
 - 聚焦 integration：1 test file、6 passed。
 - 聚焦 Day 25 browser：3 passed。
-- `npm test`：18 test files、82 passed。
+- `npm test`：18 test files、83 passed。
 - `npm run test:browser`：18 passed。
 - `npm run typecheck`：passed。
 - `npm run build`：typecheck 與 Vite production build passed；19 modules transformed。
