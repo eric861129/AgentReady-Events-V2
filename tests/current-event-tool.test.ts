@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CurrentEventToolLifecycle } from '../src/labs/current-event-tool';
 import type { EventItem } from '../src/domain/events';
-import type { ModelContext, ModelContextTool } from '../src/webmcp/types';
+import type { WebMcpAdapter } from '../src/webmcp/webmcp-adapter';
+import type { WebMcpToolDefinition } from '../src/webmcp/types';
 
 const frontendEvent: EventItem = {
   id: 'event-frontend-summit',
@@ -14,34 +15,30 @@ const frontendEvent: EventItem = {
 
 describe('CurrentEventToolLifecycle', () => {
   it('只在目前有選取活動時註冊唯讀的詳情 Tool', async () => {
-    const registerTool = vi.fn().mockResolvedValue(undefined);
-    const lifecycle = new CurrentEventToolLifecycle(createModelContext(registerTool as ModelContext['registerTool']));
+    const replaceTools = vi.fn().mockResolvedValue(undefined);
+    const lifecycle = new CurrentEventToolLifecycle(createAdapter(replaceTools));
 
     await lifecycle.sync(frontendEvent);
 
-    expect(registerTool).toHaveBeenCalledWith(
+    expect(replaceTools).toHaveBeenCalledWith([
       expect.objectContaining({
         name: 'get_current_event_lab',
         annotations: { readOnlyHint: true }
-      }),
-      expect.objectContaining({ signal: expect.any(AbortSignal) })
-    );
+      })
+    ]);
 
-    const tool = registerTool.mock.calls[0]?.[0] as ModelContextTool;
+    const tool = replaceTools.mock.calls[0]?.[0]?.[0] as WebMcpToolDefinition;
     await expect(tool.execute({})).resolves.toContain('event-frontend-summit');
   });
 
   it('離開活動詳情時會中止目前 Tool 的註冊', async () => {
-    let signal: AbortSignal | undefined;
-    const registerTool = vi.fn().mockImplementation(async (_tool, options: { signal?: AbortSignal }) => {
-      signal = options.signal;
-    });
-    const lifecycle = new CurrentEventToolLifecycle(createModelContext(registerTool as ModelContext['registerTool']));
+    const adapter = createAdapter();
+    const lifecycle = new CurrentEventToolLifecycle(adapter);
 
     await lifecycle.sync(frontendEvent);
     await lifecycle.sync(null);
 
-    expect(signal?.aborted).toBe(true);
+    expect(adapter.clearTools).toHaveBeenCalledOnce();
   });
 
   it('瀏覽器未提供 WebMCP 時不會建立替代 Tool', async () => {
@@ -51,10 +48,11 @@ describe('CurrentEventToolLifecycle', () => {
   });
 });
 
-function createModelContext(registerTool: ModelContext['registerTool']): ModelContext {
+function createAdapter(
+  replaceTools = vi.fn().mockResolvedValue(undefined)
+): WebMcpAdapter {
   return {
-    registerTool,
-    getTools: vi.fn().mockResolvedValue([]),
-    executeTool: vi.fn().mockResolvedValue(undefined)
+    replaceTools,
+    clearTools: vi.fn()
   };
 }

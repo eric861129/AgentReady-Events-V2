@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { SearchEventsRuntime } from '../src/webmcp/search-events-runtime';
-import type { ExposedTool, ModelContext, ModelContextTool } from '../src/webmcp/types';
+import { WebMcpUnsupportedError, type WebMcpRuntimeAdapter } from '../src/webmcp/webmcp-adapter';
+import type { ExposedTool, WebMcpToolDefinition } from '../src/webmcp/types';
 
 const discoveredTools: readonly ExposedTool[] = [
   {
@@ -12,7 +13,7 @@ const discoveredTools: readonly ExposedTool[] = [
 
 describe('SearchEventsRuntime', () => {
   it('未支援時回傳誠實的 unsupported snapshot', async () => {
-    const runtime = new SearchEventsRuntime({ context: null });
+    const runtime = new SearchEventsRuntime({ adapter: createAdapter({ supported: false }) });
 
     await expect(runtime.initialize()).resolves.toEqual({
       availability: 'unsupported',
@@ -23,16 +24,15 @@ describe('SearchEventsRuntime', () => {
   });
 
   it('支援時註冊 search_events 並讀取目前 Tool', async () => {
-    const context = createModelContext();
-    const runtime = new SearchEventsRuntime({ context });
+    const adapter = createAdapter();
+    const runtime = new SearchEventsRuntime({ adapter });
 
     const snapshot = await runtime.initialize();
 
-    expect(context.registerTool).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'search_events' }),
-      expect.objectContaining({ signal: expect.any(AbortSignal) })
-    );
-    expect(context.getTools).toHaveBeenCalledOnce();
+    expect(adapter.replaceTools).toHaveBeenCalledWith([
+      expect.objectContaining({ name: 'search_events' })
+    ]);
+    expect(adapter.getTools).toHaveBeenCalledOnce();
     expect(snapshot).toMatchObject({
       availability: 'registered',
       nativeSupport: true,
@@ -42,15 +42,15 @@ describe('SearchEventsRuntime', () => {
   });
 
   it('將受控暫時失敗選項傳遞給註冊的 Tool factory', async () => {
-    const context = createModelContext();
+    const adapter = createAdapter();
     const runtime = new SearchEventsRuntime({
-      context,
+      adapter,
       toolOptions: { isTemporarilyUnavailable: () => true }
     });
 
     await runtime.initialize();
 
-    const registeredTool = vi.mocked(context.registerTool).mock.calls[0]?.[0] as ModelContextTool;
+    const registeredTool = vi.mocked(adapter.replaceTools).mock.calls[0]?.[0]?.[0] as WebMcpToolDefinition;
     expect(JSON.parse(registeredTool.execute({ query: '前端' }) as string)).toMatchObject({
       status: 'error',
       errorCode: 'TEMPORARY_UNAVAILABLE'
@@ -58,20 +58,23 @@ describe('SearchEventsRuntime', () => {
   });
 
   it('以原生 executeTool 呼叫 search_events', async () => {
-    const context = createModelContext();
-    const runtime = new SearchEventsRuntime({ context });
+    const adapter = createAdapter();
+    const runtime = new SearchEventsRuntime({ adapter });
     await runtime.initialize();
 
     await runtime.invokeForEvidence({ query: '前端' });
 
-    expect(context.executeTool).toHaveBeenCalledWith('search_events', { query: '前端' });
+    expect(adapter.executeTool).toHaveBeenCalledWith(
+      discoveredTools[0],
+      JSON.stringify({ query: '前端' })
+    );
   });
 
   it('將非字串 invocation 結果保存為 raw JSON string', async () => {
-    const context = createModelContext({
+    const adapter = createAdapter({
       executeResult: { status: 'ok', count: 1 }
     });
-    const runtime = new SearchEventsRuntime({ context });
+    const runtime = new SearchEventsRuntime({ adapter });
     await runtime.initialize();
 
     const snapshot = await runtime.invokeForEvidence({ query: '前端' });
@@ -80,14 +83,14 @@ describe('SearchEventsRuntime', () => {
       input: { query: '前端' },
       rawResult: '{"status":"ok","count":1}'
     });
-    expect(context.getTools).toHaveBeenCalledTimes(2);
+    expect(adapter.getTools).toHaveBeenCalledTimes(2);
   });
 
   it('註冊失敗時保留可讀錯誤訊息', async () => {
-    const context = createModelContext({
+    const adapter = createAdapter({
       registerError: new Error('瀏覽器拒絕註冊 Tool')
     });
-    const runtime = new SearchEventsRuntime({ context });
+    const runtime = new SearchEventsRuntime({ adapter });
 
     await expect(runtime.initialize()).resolves.toEqual({
       availability: 'failed',
@@ -99,29 +102,28 @@ describe('SearchEventsRuntime', () => {
   });
 
   it('註冊失敗後直接呼叫不會執行 Tool 或改寫失敗狀態', async () => {
-    const context = createModelContext({
+    const adapter = createAdapter({
       registerError: new Error('瀏覽器拒絕註冊 Tool')
     });
-    const runtime = new SearchEventsRuntime({ context });
+    const runtime = new SearchEventsRuntime({ adapter });
     const failedRegistration = await runtime.initialize();
 
     const snapshot = await runtime.invokeForEvidence({ query: '前端' });
 
-    expect(context.executeTool).not.toHaveBeenCalled();
+    expect(adapter.executeTool).not.toHaveBeenCalled();
     expect(snapshot).toEqual(failedRegistration);
   });
 
   it('註冊成功但初次發現失敗時中止該次註冊且禁止後續呼叫', async () => {
-    const context = createModelContext({
+    const adapter = createAdapter({
       getToolsError: new Error('瀏覽器拒絕發現 Tool')
     });
-    const runtime = new SearchEventsRuntime({ context });
+    const runtime = new SearchEventsRuntime({ adapter });
 
     const failedDiscovery = await runtime.initialize();
-    const registrationSignal = vi.mocked(context.registerTool).mock.calls[0]?.[1]?.signal;
     const invocationSnapshot = await runtime.invokeForEvidence({ query: '前端' });
 
-    expect(registrationSignal?.aborted).toBe(true);
+    expect(adapter.clearTools).toHaveBeenCalledOnce();
     expect(failedDiscovery).toEqual({
       availability: 'failed',
       nativeSupport: true,
@@ -129,15 +131,15 @@ describe('SearchEventsRuntime', () => {
       discoveredTools: [],
       errorMessage: '瀏覽器拒絕發現 Tool'
     });
-    expect(context.executeTool).not.toHaveBeenCalled();
+    expect(adapter.executeTool).not.toHaveBeenCalled();
     expect(invocationSnapshot).toEqual(failedDiscovery);
   });
 
   it('成功註冊後呼叫失敗時回傳呼叫流程錯誤', async () => {
-    const context = createModelContext({
+    const adapter = createAdapter({
       executeError: new Error('Browser API 拒絕呼叫 Tool')
     });
-    const runtime = new SearchEventsRuntime({ context });
+    const runtime = new SearchEventsRuntime({ adapter });
     await runtime.initialize();
 
     await expect(runtime.invokeForEvidence({ query: '前端' })).resolves.toEqual({
@@ -151,14 +153,14 @@ describe('SearchEventsRuntime', () => {
 
   it('直接並行 initialize 與 invocation 時由 Runtime 依序完成', async () => {
     const registrationGate = createDeferred();
-    const context = createModelContext({ registrationGate: registrationGate.promise });
-    const runtime = new SearchEventsRuntime({ context });
+    const adapter = createAdapter({ registrationGate: registrationGate.promise });
+    const runtime = new SearchEventsRuntime({ adapter });
 
     const initialization = runtime.initialize();
     const invocation = runtime.invokeForEvidence({ query: '前端' });
-    await vi.waitFor(() => expect(context.registerTool).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(adapter.replaceTools).toHaveBeenCalledOnce());
 
-    expect(context.executeTool).not.toHaveBeenCalled();
+    expect(adapter.executeTool).not.toHaveBeenCalled();
 
     registrationGate.resolve();
     const [initializationSnapshot, invocationSnapshot] = await Promise.all([
@@ -168,25 +170,35 @@ describe('SearchEventsRuntime', () => {
 
     expect(initializationSnapshot.availability).toBe('registered');
     expect(invocationSnapshot.availability).toBe('registered');
-    expect(context.executeTool).toHaveBeenCalledWith('search_events', { query: '前端' });
+    expect(adapter.executeTool).toHaveBeenCalledWith(
+      discoveredTools[0],
+      JSON.stringify({ query: '前端' })
+    );
   });
 });
 
-function createModelContext(options: {
+function createAdapter(options: {
+  readonly supported?: boolean;
   readonly executeResult?: unknown;
   readonly executeError?: Error;
   readonly getToolsError?: Error;
   readonly registerError?: Error;
   readonly registrationGate?: Promise<void>;
-} = {}): ModelContext {
+} = {}): WebMcpRuntimeAdapter {
   return {
-    registerTool: vi.fn().mockImplementation(async () => {
+    supported: options.supported ?? true,
+    replaceTools: vi.fn().mockImplementation(async () => {
       await options.registrationGate;
+
+      if (options.supported === false) {
+        throw new WebMcpUnsupportedError();
+      }
 
       if (options.registerError !== undefined) {
         throw options.registerError;
       }
     }),
+    clearTools: vi.fn(),
     getTools: vi.fn().mockImplementation(async () => {
       if (options.getToolsError !== undefined) {
         throw options.getToolsError;

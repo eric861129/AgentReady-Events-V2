@@ -10,9 +10,16 @@ export default defineConfig({
   },
   webServer: usesExternalServer
     ? undefined
-    : {
-        command: 'npm.cmd run dev -- --port 4173',
-        url: 'http://127.0.0.1:4173',
-        reuseExistingServer: true
-      }
+    : [
+        {
+          command: 'npm.cmd run dev:api',
+          url: 'http://127.0.0.1:8787/api/saved-events',
+          reuseExistingServer: true
+        },
+        {
+          command: 'npm.cmd run dev:web -- --port 4173',
+          url: 'http://127.0.0.1:4173',
+          reuseExistingServer: true
+        }
+      ]
 });

@@ -3,14 +3,15 @@ export interface ToolInputSchema {
   type: 'object';
   properties?: Record<string, unknown>;
   required?: readonly string[];
+  additionalProperties?: boolean;
 }
 
 /** 網頁提供給 WebMCP 的命令式 Tool 定義。 */
-export interface ModelContextTool {
+export interface WebMcpToolDefinition {
   name: string;
   description: string;
   inputSchema: ToolInputSchema;
-  execute: (input: Record<string, unknown>) => unknown | Promise<unknown>;
+  execute: (input: unknown) => unknown | Promise<unknown>;
   annotations?: {
     readOnlyHint?: boolean;
     untrustedContentHint?: boolean;
@@ -24,17 +25,9 @@ export interface ExposedTool {
   inputSchema: string;
 }
 
-/** Day 11–12 使用的 WebMCP 草案瀏覽器介面。 */
-export interface ModelContext {
-  registerTool(tool: ModelContextTool, options?: { signal?: AbortSignal }): Promise<void>;
+/** Chrome 目前提供的 WebMCP Imperative API 最小原生介面。 */
+export interface NativeModelContext {
+  registerTool(tool: WebMcpToolDefinition, options?: { signal?: AbortSignal }): Promise<void>;
   getTools(): Promise<readonly ExposedTool[]>;
-  executeTool(name: string, input: Record<string, unknown>): Promise<unknown>;
+  executeTool(tool: ExposedTool, input: string, options?: { signal?: AbortSignal }): Promise<unknown>;
 }
-
-declare global {
-  interface Document {
-    modelContext?: ModelContext;
-  }
-}
-
-export {};

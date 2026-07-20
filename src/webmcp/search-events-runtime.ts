@@ -3,7 +3,8 @@ import {
   createSearchEventsTool,
   SEARCH_EVENTS_TOOL_NAME
 } from './search-events-tool';
-import type { ExposedTool, ModelContext } from './types';
+import type { WebMcpRuntimeAdapter } from './webmcp-adapter';
+import type { ExposedTool, WebMcpToolDefinition } from './types';
 
 export type SearchEventsRuntimeAvailability =
   | 'unsupported'
@@ -24,23 +25,22 @@ export type SearchEventsRuntimeSnapshot = {
 
 /** 管理原生 WebMCP search_events Tool 的註冊、發現與呼叫證據。 */
 export class SearchEventsRuntime {
-  private activeRegistration?: AbortController;
   private operationQueue: Promise<void> = Promise.resolve();
   private registrationSucceeded = false;
   private snapshot: SearchEventsRuntimeSnapshot;
-  private readonly context: ModelContext | null;
+  private readonly adapter: WebMcpRuntimeAdapter;
   private readonly toolOptions?: SearchEventsToolOptions;
 
   constructor({
-    context,
+    adapter,
     toolOptions
   }: {
-    readonly context: ModelContext | null;
+    readonly adapter: WebMcpRuntimeAdapter;
     readonly toolOptions?: SearchEventsToolOptions;
   }) {
-    this.context = context;
+    this.adapter = adapter;
     this.toolOptions = toolOptions;
-    this.snapshot = context === null
+    this.snapshot = !adapter.supported
       ? createUnsupportedSnapshot()
       : {
         availability: 'failed',
@@ -60,40 +60,42 @@ export class SearchEventsRuntime {
     return this.enqueueOperation(() => this.invokeForEvidenceInternal(input));
   }
 
+  async replaceTools(
+    tools: readonly WebMcpToolDefinition[]
+  ): Promise<SearchEventsRuntimeSnapshot> {
+    return this.enqueueOperation(() => this.replaceToolsInternal(tools));
+  }
+
   private async initializeInternal(): Promise<SearchEventsRuntimeSnapshot> {
-    if (this.context === null) {
+    return this.replaceToolsInternal([createSearchEventsTool(this.toolOptions)]);
+  }
+
+  private async replaceToolsInternal(
+    tools: readonly WebMcpToolDefinition[]
+  ): Promise<SearchEventsRuntimeSnapshot> {
+    if (!this.adapter.supported) {
       this.registrationSucceeded = false;
       this.snapshot = createUnsupportedSnapshot();
       return this.snapshot;
     }
 
-    this.activeRegistration?.abort();
-    const registration = new AbortController();
-    this.activeRegistration = registration;
     this.registrationSucceeded = false;
-    let registrationCreated = false;
 
     try {
-      await this.context.registerTool(
-        createSearchEventsTool(this.toolOptions),
-        { signal: registration.signal }
-      );
-      registrationCreated = true;
-      const discoveredTools = await this.context.getTools();
+      await this.adapter.replaceTools(tools);
+      const discoveredTools = await this.adapter.getTools();
+      const toolNames = tools.map((tool) => tool.name).join('、');
 
       this.registrationSucceeded = true;
       this.snapshot = {
         availability: 'registered',
         nativeSupport: true,
-        registrationStatus: '已透過 document.modelContext 註冊 search_events。',
+        registrationStatus: `已透過 document.modelContext 註冊 ${toolNames}。`,
         discoveredTools
       };
       return this.snapshot;
     } catch (error) {
-      if (registrationCreated) {
-        registration.abort();
-        this.activeRegistration = undefined;
-      }
+      this.adapter.clearTools();
 
       this.registrationSucceeded = false;
       this.snapshot = {
@@ -110,12 +112,20 @@ export class SearchEventsRuntime {
   private async invokeForEvidenceInternal(
     input: Record<string, unknown>
   ): Promise<SearchEventsRuntimeSnapshot> {
-    if (this.context === null || !this.registrationSucceeded) {
+    if (!this.adapter.supported || !this.registrationSucceeded) {
       return this.snapshot;
     }
 
     try {
-      const result = await this.context.executeTool(SEARCH_EVENTS_TOOL_NAME, input);
+      const tool = this.snapshot.discoveredTools.find(
+        (candidate) => candidate.name === SEARCH_EVENTS_TOOL_NAME
+      );
+
+      if (tool === undefined) {
+        throw new Error(`找不到已發現的 WebMCP Tool：${SEARCH_EVENTS_TOOL_NAME}`);
+      }
+
+      const result = await this.adapter.executeTool(tool, JSON.stringify(input));
       const rawResult = typeof result === 'string'
         ? result
         : JSON.stringify(result) ?? 'undefined';
@@ -155,7 +165,7 @@ export class SearchEventsRuntime {
 
   private async refreshDiscoveredTools(): Promise<readonly ExposedTool[]> {
     try {
-      return await this.context!.getTools();
+      return await this.adapter.getTools();
     } catch {
       return this.snapshot.discoveredTools;
     }

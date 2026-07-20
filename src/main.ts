@@ -1,10 +1,13 @@
 /// <reference types="vite/client" />
 
 import { events, searchEvents, toggleSavedEvent, type EventItem } from './domain/events';
-import { CurrentEventToolLifecycle } from './labs/current-event-tool';
+import { createSaveEventUseCase } from './application/save-event';
+import { createSavedEventsApi } from './client/saved-events-api';
 import { createDeclarativeToolPreview, type DeclarativeToolDefinition } from './labs/declarative-preview';
+import { createSaveEventTool } from './webmcp/save-event-tool';
 import { SearchEventsRuntime, type SearchEventsRuntimeSnapshot } from './webmcp/search-events-runtime';
-import { getSupportedModelContext, readCurrentTools } from './webmcp/support';
+import { createSearchEventsTool } from './webmcp/search-events-tool';
+import { createWebMcpAdapter } from './webmcp/webmcp-adapter';
 import './styles.css';
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -14,16 +17,20 @@ if (app === null) {
 }
 
 const appRoot = app;
-const modelContext = getSupportedModelContext(document);
-const currentEventToolLifecycle = new CurrentEventToolLifecycle(modelContext);
+const webMcpAdapter = createWebMcpAdapter(document);
+const savedEventsApi = createSavedEventsApi(window.fetch.bind(window));
 const temporaryFailureEvidenceScenario =
   import.meta.env.DEV &&
   new URLSearchParams(window.location.search).get('evidenceScenario') === 'temporary-unavailable';
 const searchEventsRuntime = new SearchEventsRuntime({
-  context: getSupportedModelContext(document),
+  adapter: webMcpAdapter,
   toolOptions: {
     isTemporarilyUnavailable: () => temporaryFailureEvidenceScenario
   }
+});
+const saveEventUseCase = createSaveEventUseCase({
+  api: savedEventsApi,
+  getCurrentRoute: () => selectedEventId === null ? null : { eventId: selectedEventId }
 });
 
 let activeQuery = '';
@@ -82,11 +89,10 @@ function render(): void {
     </main>
   `;
 
-  void synchronizeCurrentEventTool();
 }
 
 function renderWebMcpRuntimePanel(): string {
-  const hasNativeSupport = searchEventsRuntimeSnapshot?.nativeSupport ?? modelContext !== null;
+  const hasNativeSupport = searchEventsRuntimeSnapshot?.nativeSupport ?? webMcpAdapter.supported;
   const registrationStatus = searchEventsRuntimeSnapshot?.registrationStatus ?? '正在初始化 WebMCP runtime。';
   const discoveredTools = searchEventsRuntimeSnapshot?.discoveredTools ?? [];
   const toolNames = discoveredTools.map((tool) => `<li><code>${escapeHtml(tool.name)}</code></li>`).join('');
@@ -240,7 +246,7 @@ function renderEventDetail(): string {
 }
 
 function renderImperativeLabStatus(): string {
-  if (modelContext === null) {
+  if (!webMcpAdapter.supported) {
     return `
       <aside class="imperative-lab-status" data-testid="imperative-lab-status" aria-live="polite">
         <strong>Day 12｜Imperative API Lab</strong>
@@ -251,36 +257,10 @@ function renderImperativeLabStatus(): string {
 
   return `
     <aside class="imperative-lab-status" data-testid="imperative-lab-status" aria-live="polite">
-      <strong>Day 12｜Imperative API Lab</strong>
-      <p>正在向瀏覽器註冊目前活動的唯讀 Lab Tool，並讀取實際可見的 Tool 清單。</p>
+      <strong>Day 21｜詳情狀態 Tool</strong>
+      <p>正在更新目前頁面狀態可用的 Tool；只有顯示活動詳情時才會宣告 <code>save_event</code>。</p>
     </aside>
   `;
-}
-
-async function synchronizeCurrentEventTool(): Promise<void> {
-  const selectedEvent = events.find((event) => event.id === selectedEventId) ?? null;
-
-  try {
-    await currentEventToolLifecycle.sync(selectedEvent);
-
-    if (modelContext === null || selectedEvent === null) {
-      return;
-    }
-
-    const tools = await readCurrentTools(modelContext);
-    const status = appRoot.querySelector<HTMLElement>('[data-testid="imperative-lab-status"]');
-
-    if (status !== null && selectedEvent.id === selectedEventId) {
-      const toolNames = tools.map((tool) => tool.name).join('、') || '（目前清單為空）';
-      status.innerHTML = `<strong>Day 12｜Imperative API Lab</strong><p>瀏覽器目前可見的 Tool：${escapeHtml(toolNames)}。這是 <code>getTools()</code> 的實際結果。</p>`;
-    }
-  } catch (error) {
-    const status = appRoot.querySelector<HTMLElement>('[data-testid="imperative-lab-status"]');
-
-    if (status !== null && selectedEvent !== null && selectedEvent.id === selectedEventId) {
-      status.innerHTML = `<strong>Day 12｜Imperative API Lab</strong><p>瀏覽器拒絕或無法完成 Tool 註冊：${escapeHtml(getErrorMessage(error))}</p>`;
-    }
-  }
 }
 
 function formatDate(value: string): string {
@@ -305,10 +285,6 @@ function escapeHtml(value: string): string {
   });
 }
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : '未知錯誤';
-}
-
 function enqueueSearchEventsRuntimeOperation(
   operation: () => Promise<SearchEventsRuntimeSnapshot>
 ): void {
@@ -320,6 +296,27 @@ function enqueueSearchEventsRuntimeOperation(
 
 function initializeSearchEventsRuntime(): void {
   enqueueSearchEventsRuntimeOperation(() => searchEventsRuntime.initialize());
+}
+
+function synchronizeWebMcpTools(): void {
+  const searchTool = createSearchEventsTool({
+    isTemporarilyUnavailable: () => temporaryFailureEvidenceScenario
+  });
+  const tools = selectedEventId === null
+    ? [searchTool]
+    : [searchTool, createSaveEventTool(saveEventUseCase)];
+
+  enqueueSearchEventsRuntimeOperation(() => searchEventsRuntime.replaceTools(tools));
+}
+
+async function initializeApplication(): Promise<void> {
+  try {
+    await savedEventsApi.createDemoSession();
+  } catch (error) {
+    console.error('無法建立 Demo session，save_event 將由 API 回報失敗。', error);
+  }
+
+  initializeSearchEventsRuntime();
 }
 
 function invokeSearchEventsForEvidence(form: HTMLFormElement): void {
@@ -379,6 +376,7 @@ appRoot.addEventListener('click', (event) => {
 
   if (action === 'close-detail') {
     selectedEventId = null;
+    synchronizeWebMcpTools();
     render();
 
     return;
@@ -390,6 +388,7 @@ appRoot.addEventListener('click', (event) => {
 
   if (action === 'detail') {
     selectedEventId = eventId;
+    synchronizeWebMcpTools();
   }
 
   if (action === 'save') {
@@ -400,4 +399,4 @@ appRoot.addEventListener('click', (event) => {
 });
 
 render();
-initializeSearchEventsRuntime();
+void initializeApplication();

@@ -1,20 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getSupportedModelContext, readCurrentTools } from '../src/webmcp/support';
-import type { ModelContext } from '../src/webmcp/types';
+import { isWebMcpSupported, readCurrentTools } from '../src/webmcp/support';
+import type { WebMcpRuntimeAdapter } from '../src/webmcp/webmcp-adapter';
 
 describe('WebMCP support detection', () => {
-  it('回傳瀏覽器實際提供的 modelContext', () => {
-    const context = createModelContext();
-
-    expect(getSupportedModelContext({ modelContext: context } as Document)).toBe(context);
+  it('由 adapter 回報瀏覽器是否支援 modelContext', () => {
+    expect(isWebMcpSupported(createAdapter(true))).toBe(true);
+    expect(isWebMcpSupported(createAdapter(false))).toBe(false);
   });
 
-  it('瀏覽器未提供 modelContext 時回傳 null', () => {
-    expect(getSupportedModelContext({} as Document)).toBeNull();
-  });
-
-  it('只從實際提供的 context 讀取目前可用 Tool', async () => {
-    const context = createModelContext([
+  it('只從 adapter 讀取目前可用 Tool', async () => {
+    const adapter = createAdapter(true, [
       {
         name: 'get_current_event_lab',
         description: '讀取目前查看的活動。',
@@ -22,26 +17,25 @@ describe('WebMCP support detection', () => {
       }
     ]);
 
-    await expect(readCurrentTools(context)).resolves.toEqual([
+    await expect(readCurrentTools(adapter)).resolves.toEqual([
       {
         name: 'get_current_event_lab',
         description: '讀取目前查看的活動。',
         inputSchema: '{"type":"object"}'
       }
     ]);
-    await expect(readCurrentTools(null)).resolves.toEqual([]);
-  });
-
-  it('保留瀏覽器原生 executeTool 呼叫契約', async () => {
-    const context = createModelContext();
-
-    await expect(context.executeTool('get_current_event_lab', { eventId: 'evt-1' })).resolves.toBeUndefined();
+    await expect(readCurrentTools(createAdapter(false))).resolves.toEqual([]);
   });
 });
 
-function createModelContext(tools: readonly { name: string; description: string; inputSchema: string }[] = []): ModelContext {
+function createAdapter(
+  supported: boolean,
+  tools: readonly { name: string; description: string; inputSchema: string }[] = []
+): WebMcpRuntimeAdapter {
   return {
-    registerTool: vi.fn(),
+    supported,
+    replaceTools: vi.fn().mockResolvedValue(undefined),
+    clearTools: vi.fn(),
     getTools: vi.fn().mockResolvedValue(tools),
     executeTool: vi.fn().mockResolvedValue(undefined)
   };

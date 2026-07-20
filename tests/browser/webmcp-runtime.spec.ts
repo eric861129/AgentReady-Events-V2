@@ -38,7 +38,8 @@ test('注入 document.modelContext browser test double 時顯示 Browser observa
             }
           ];
         },
-        async executeTool(_name: string, input: Record<string, unknown>) {
+        async executeTool(_tool: { name: string }, inputJson: string) {
+          const input = JSON.parse(inputJson) as Record<string, unknown>;
           return {
             status: 'ok',
             appliedFilters: input,
@@ -88,6 +89,60 @@ test('受控暫時失敗情境會在直接證據面板顯示 TEMPORARY_UNAVAILAB
   const evidenceLog = panel.getByTestId('runtime-evidence-log');
   await expect(evidenceLog).toContainText('前端');
   await expect(evidenceLog).toContainText('TEMPORARY_UNAVAILABLE');
+});
+
+test('browser test double：save_event 只在活動詳情顯示，且同一活動重複收藏保持冪等', async ({ page }) => {
+  await installMultipleRegisteredToolsBrowserTestDouble(page);
+  await page.goto('/');
+
+  await expect.poll(() => readRegisteredToolNames(page)).toEqual(['search_events']);
+
+  await page.evaluate(async (eventId) => {
+    await fetch(`/api/saved-events/${eventId}`, {
+      method: 'DELETE',
+      credentials: 'same-origin'
+    });
+  }, 'event-frontend-summit');
+
+  await page.locator('[data-event-id="event-frontend-summit"]')
+    .getByRole('button', { name: '查看詳情' })
+    .click();
+
+  await expect.poll(() => readRegisteredToolNames(page)).toContain('save_event');
+
+  const responses = await page.evaluate(async (eventId) => {
+    const context = (document as Document & {
+      modelContext: {
+        getTools(): Promise<readonly { name: string }[]>;
+        executeTool(tool: { name: string }, input: string): Promise<unknown>;
+      };
+    }).modelContext;
+    const tool = (await context.getTools()).find((candidate) => candidate.name === 'save_event');
+
+    if (tool === undefined) {
+      throw new Error('browser test double 找不到 save_event。');
+    }
+
+    return [
+      await context.executeTool(tool, JSON.stringify({ eventId })),
+      await context.executeTool(tool, JSON.stringify({ eventId }))
+    ];
+  }, 'event-frontend-summit');
+
+  expect(responses.map((response) => JSON.parse(response as string))).toEqual([
+    {
+      status: 'ok',
+      eventId: 'event-frontend-summit',
+      saved: true,
+      changed: true
+    },
+    {
+      status: 'ok',
+      eventId: 'event-frontend-summit',
+      saved: true,
+      changed: false
+    }
+  ]);
 });
 
 test('延遲 document.modelContext browser test double 時依序完成註冊再 invocation 並保留輸入與最終證據', async ({ page }) => {
@@ -160,7 +215,8 @@ async function installDelayedModelContextBrowserTestDouble(page: Page): Promise<
             }
           ];
         },
-        async executeTool(_name: string, input: Record<string, unknown>) {
+        async executeTool(_tool: { name: string }, inputJson: string) {
+          const input = JSON.parse(inputJson) as Record<string, unknown>;
           calls.push('executeTool');
           return {
             status: 'ok',
@@ -228,14 +284,65 @@ async function installRegisteredToolBrowserTestDouble(page: Page): Promise<void>
                 inputSchema: '{"type":"object"}'
               }];
         },
-        async executeTool(name: string, input: Record<string, unknown>) {
-          if (registeredTool === undefined || name !== registeredTool.name) {
+        async executeTool(tool: { name: string }, inputJson: string) {
+          if (registeredTool === undefined || tool.name !== registeredTool.name) {
             throw new Error('browser test double 找不到已註冊的 Tool。');
           }
 
-          return registeredTool.execute(input);
+          return registeredTool.execute(JSON.parse(inputJson) as Record<string, unknown>);
         }
       }
     });
+  });
+}
+
+async function installMultipleRegisteredToolsBrowserTestDouble(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    type RegisteredTool = {
+      readonly name: string;
+      readonly description: string;
+      readonly inputSchema: Record<string, unknown>;
+      readonly execute: (input: Record<string, unknown>) => unknown | Promise<unknown>;
+    };
+    const registrations: Array<{ tool: RegisteredTool; signal?: AbortSignal }> = [];
+
+    Object.defineProperty(document, 'modelContext', {
+      configurable: true,
+      value: {
+        async registerTool(tool: RegisteredTool, options?: { signal?: AbortSignal }) {
+          registrations.push({ tool, signal: options?.signal });
+        },
+        async getTools() {
+          return registrations
+            .filter((registration) => !registration.signal?.aborted)
+            .map(({ tool }) => ({
+              name: tool.name,
+              description: tool.description,
+              inputSchema: JSON.stringify(tool.inputSchema)
+            }));
+        },
+        async executeTool(tool: { name: string }, inputJson: string) {
+          const registration = registrations.find((candidate) => (
+            !candidate.signal?.aborted && candidate.tool.name === tool.name
+          ));
+
+          if (registration === undefined) {
+            throw new Error(`browser test double 找不到已註冊的 Tool：${tool.name}`);
+          }
+
+          return registration.tool.execute(JSON.parse(inputJson) as Record<string, unknown>);
+        }
+      }
+    });
+  });
+}
+
+async function readRegisteredToolNames(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
+    const context = (document as Document & {
+      modelContext: { getTools(): Promise<readonly { name: string }[]> };
+    }).modelContext;
+
+    return (await context.getTools()).map((tool) => tool.name).sort();
   });
 }

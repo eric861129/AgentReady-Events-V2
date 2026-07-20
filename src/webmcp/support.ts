@@ -1,19 +1,20 @@
-import type { ExposedTool, ModelContext } from './types';
+import type { WebMcpRuntimeAdapter } from './webmcp-adapter';
+import type { ExposedTool } from './types';
 
-/**
- * 讀取瀏覽器已提供的 WebMCP 介面；未提供時不建立替代實作。
- */
-export function getSupportedModelContext(document: Pick<Document, 'modelContext'>): ModelContext | null {
-  return document.modelContext ?? null;
+/** adapter 是否觀測到原生 WebMCP 介面；不建立替代實作。 */
+export function isWebMcpSupported(adapter: WebMcpRuntimeAdapter): boolean {
+  return adapter.supported;
 }
 
 /**
  * 讀取瀏覽器實際可見的 Tool 清單；空陣列不代表 Agent 已發現或呼叫 Tool。
  */
-export async function readCurrentTools(context: ModelContext | null): Promise<readonly ExposedTool[]> {
-  if (context === null) {
+export async function readCurrentTools(
+  adapter: WebMcpRuntimeAdapter
+): Promise<readonly ExposedTool[]> {
+  if (!adapter.supported) {
     return [];
   }
 
-  return context.getTools();
+  return adapter.getTools();
 }

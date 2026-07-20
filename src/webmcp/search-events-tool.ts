@@ -2,13 +2,13 @@ import {
   searchEventsForTool,
   type SearchEventsToolOptions
 } from '../domain/search-events-tool';
-import type { ModelContextTool } from './types';
+import type { WebMcpToolDefinition } from './types';
 
 export const SEARCH_EVENTS_TOOL_NAME = 'search_events';
 
 export function createSearchEventsTool(
   options?: SearchEventsToolOptions
-): ModelContextTool {
+): WebMcpToolDefinition {
   return {
     name: SEARCH_EVENTS_TOOL_NAME,
     description: '搜尋公開活動清單，可依關鍵字、分類與日期找到適合推薦給使用者的活動。',
