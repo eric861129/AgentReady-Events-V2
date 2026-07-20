@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Day 19 Agent 操作風險矩陣</title>
+  <desc id="desc">search_events 無副作用，save_event 為可由使用者介面復原的低風險收藏，register_for_event 必須停在人類確認。</desc>
+  <style>
+    .title { font: 700 32px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #172033; }
+    .subtitle { font: 500 18px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #536174; }
+    .head { font: 700 18px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #fff; }
+    .cell { font: 500 18px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #243149; }
+    .small { font: 500 16px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #243149; }
+    .label { font: 700 17px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #fff; }
+  </style>
+  <rect width="1200" height="760" fill="#f7f9fc"/>
+  <text x="60" y="62" class="title">Day 19：Agent 操作的副作用界線</text>
+  <text x="60" y="96" class="subtitle">Evidence type: design boundary</text>
+  <rect x="60" y="130" width="1080" height="56" rx="8" fill="#243b63"/>
+  <text x="86" y="165" class="head">動作</text><text x="290" y="165" class="head">副作用與風險</text><text x="565" y="165" class="head">Agent 能做的範圍</text><text x="835" y="165" class="head">使用者可見性／復原</text>
+  <rect x="60" y="186" width="1080" height="154" fill="#e9f6ef" stroke="#c8dece"/>
+  <rect x="80" y="210" width="166" height="34" rx="17" fill="#287a50"/><text x="100" y="233" class="label">search_events</text>
+  <text x="290" y="224" class="cell">無副作用</text><text x="290" y="254" class="small">只讀取公開活動資料</text>
+  <text x="565" y="224" class="cell">可直接查詢與整理</text><text x="565" y="254" class="small">呈現搜尋結果</text>
+  <text x="835" y="224" class="cell">條件與結果可見</text><text x="835" y="254" class="small">不需復原；重新搜尋即可</text>
+  <rect x="60" y="350" width="1080" height="154" fill="#fff6dd" stroke="#eadbb0"/>
+  <rect x="80" y="374" width="142" height="34" rx="17" fill="#aa6b00"/><text x="100" y="397" class="label">save_event</text>
+  <text x="290" y="388" class="cell">低風險：加入收藏</text><text x="290" y="418" class="small">非報名、非付款</text>
+  <text x="565" y="388" class="cell">可在可信任邊界內要求收藏</text><text x="565" y="418" class="small">不以隱藏 toggle 操作</text>
+  <text x="835" y="388" class="cell">UI 顯示收藏狀態</text><text x="835" y="418" class="small">人類可由 UI 取消收藏</text>
+  <rect x="60" y="514" width="1080" height="174" fill="#fcebed" stroke="#ebc3c8"/>
+  <rect x="80" y="538" width="214" height="34" rx="17" fill="#ae3142"/><text x="99" y="561" class="label">register_for_event</text>
+  <text x="290" y="552" class="cell">高責任：名額、個資與義務</text><text x="290" y="582" class="small">不可假設能自動送出</text>
+  <text x="565" y="552" class="cell">只能協助準備報名草稿</text><text x="565" y="582" class="small">必須停在人類確認點</text>
+  <text x="835" y="552" class="cell">完整顯示活動、個資與影響</text><text x="835" y="582" class="small">確認前可修改或放棄草稿</text>
+  <text x="60" y="730" class="subtitle">判準：看得見、能復原、由人確認；缺一不可自動完成。</text>
+</svg>
