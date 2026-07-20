@@ -377,6 +377,83 @@ h1 {
   background: #e9efff !important;
 }
 
+.saved-events {
+  margin-top: 3.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid #bcd0fc;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(31 52 94 / 0.06);
+}
+
+.saved-events__heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.saved-events__heading h2,
+.saved-events__heading p {
+  margin-bottom: 0;
+}
+
+.saved-events__heading > p,
+.saved-events__empty {
+  color: #4d5b75;
+}
+
+.saved-events__items {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-events__items li,
+.saved-events__undo,
+.event-detail-saved-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  background: #f5f7fb;
+}
+
+.saved-events__items button,
+.saved-events__undo button,
+.event-detail-saved-state button {
+  flex: 0 0 auto;
+  padding: 0.625rem 0.875rem;
+  border: 0;
+  border-radius: 0.625rem;
+  color: #fff;
+  background: #315bc5;
+  font-weight: 700;
+}
+
+.saved-events__undo {
+  margin-top: 1rem;
+  background: #eef4ff;
+}
+
+.saved-events__undo p,
+.event-detail-saved-state p {
+  margin: 0;
+}
+
+.saved-events__error {
+  color: #9b1c1c;
+}
+
+.event-detail-saved-state {
+  margin-top: 1rem;
+}
+
 .dialog-backdrop {
   position: fixed;
   z-index: 1;
@@ -449,6 +526,14 @@ input:focus-visible {
   .search-controls,
   .result-heading,
   .webmcp-lab__heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .saved-events__heading,
+  .saved-events__items li,
+  .saved-events__undo,
+  .event-detail-saved-state {
     align-items: stretch;
     flex-direction: column;
   }

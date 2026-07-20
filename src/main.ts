@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import { events, searchEvents, toggleSavedEvent, type EventItem } from './domain/events';
+import { events, searchEvents, type EventItem } from './domain/events';
 import { createSaveEventUseCase } from './application/save-event';
 import { createSavedEventsApi } from './client/saved-events-api';
 import { createDeclarativeToolPreview, type DeclarativeToolDefinition } from './labs/declarative-preview';
@@ -36,6 +36,8 @@ const saveEventUseCase = createSaveEventUseCase({
 let activeQuery = '';
 let visibleEvents: readonly EventItem[] = events;
 let savedEventIds: readonly string[] = [];
+let savedEventsError: string | null = null;
+let lastRemovedEventId: string | null = null;
 let selectedEventId: string | null = null;
 let searchEventsRuntimeSnapshot: SearchEventsRuntimeSnapshot | null = null;
 let nativeToolQuery = '前端';
@@ -84,6 +86,7 @@ function render(): void {
           ${visibleEvents.map(renderEventCard).join('')}
         </div>
       </section>
+      ${renderSavedEventsList()}
       ${renderDeclarativeSearchLab()}
       ${renderEventDetail()}
     </main>
@@ -178,7 +181,7 @@ function renderEventCard(event: EventItem): string {
       <p class="event-card__location">${event.location}</p>
       <div class="event-card__actions">
         <button class="event-card__detail" type="button" data-action="detail" data-event-id="${event.id}">查看詳情</button>
-        <button type="button" data-action="save" data-event-id="${event.id}">${saveLabel}</button>
+        <button type="button" data-action="save" data-event-id="${event.id}" aria-pressed="${isSaved}" ${isSaved ? 'disabled' : ''}>${saveLabel}</button>
       </div>
     </article>
   `;
@@ -239,6 +242,7 @@ function renderEventDetail(): string {
         <h2 id="event-dialog-title">${selectedEvent.title}</h2>
         <p>${selectedEvent.summary}</p>
         <p class="event-card__location">地點：${selectedEvent.location}</p>
+        ${renderEventDetailSavedState(selectedEvent)}
         ${renderImperativeLabStatus()}
       </section>
     </div>
@@ -260,6 +264,57 @@ function renderImperativeLabStatus(): string {
       <strong>Day 21｜詳情狀態 Tool</strong>
       <p>正在更新目前頁面狀態可用的 Tool；只有顯示活動詳情時才會宣告 <code>save_event</code>。</p>
     </aside>
+  `;
+}
+
+function renderEventDetailSavedState(event: EventItem): string {
+  const isSaved = savedEventIds.includes(event.id);
+
+  return `
+    <div class="event-detail-saved-state" data-testid="event-detail-saved-state">
+      <p>收藏狀態：<strong>${isSaved ? '已收藏' : '尚未收藏'}</strong></p>
+      <button type="button" data-action="save" data-event-id="${event.id}" ${isSaved ? 'disabled' : ''}>${isSaved ? '已收藏' : '收藏活動'}</button>
+    </div>
+  `;
+}
+
+function renderSavedEventsList(): string {
+  const savedEvents = savedEventIds
+    .map((eventId) => events.find((event) => event.id === eventId))
+    .filter((event): event is EventItem => event !== undefined);
+  const undoEvent = lastRemovedEventId === null
+    ? undefined
+    : events.find((event) => event.id === lastRemovedEventId);
+
+  return `
+    <section class="saved-events" data-testid="saved-events-list" aria-labelledby="saved-events-title" aria-live="polite">
+      <div class="saved-events__heading">
+        <div>
+          <p class="section-label">Day 22｜人類可見的收藏狀態</p>
+          <h2 id="saved-events-title">我的收藏</h2>
+        </div>
+        <p>收藏狀態以 server 為準，重新載入後會重新同步。</p>
+      </div>
+      ${savedEventsError === null ? '' : `<p class="saved-events__error">${escapeHtml(savedEventsError)}</p>`}
+      ${savedEvents.length === 0
+        ? '<p class="saved-events__empty">尚未收藏任何活動</p>'
+        : `<ul class="saved-events__items">${savedEvents.map(renderSavedEvent).join('')}</ul>`}
+      ${undoEvent === undefined ? '' : `
+        <div class="saved-events__undo" aria-live="polite">
+          <p>已取消收藏「${escapeHtml(undoEvent.title)}」。</p>
+          <button type="button" data-action="undo-remove" data-event-id="${undoEvent.id}" data-testid="saved-events-undo">復原收藏</button>
+        </div>
+      `}
+    </section>
+  `;
+}
+
+function renderSavedEvent(event: EventItem): string {
+  return `
+    <li>
+      <span>${escapeHtml(event.title)}</span>
+      <button type="button" data-action="remove-saved" data-event-id="${event.id}" data-testid="remove-saved-${event.id}">取消收藏</button>
+    </li>
   `;
 }
 
@@ -308,11 +363,48 @@ function synchronizeWebMcpTools(): void {
 async function initializeApplication(): Promise<void> {
   try {
     await savedEventsApi.createDemoSession();
+    await synchronizeSavedEvents();
   } catch (error) {
-    console.error('無法建立 Demo session，save_event 將由 API 回報失敗。', error);
+    savedEventsError = '無法同步收藏狀態，請稍後再試。';
+    console.error('無法建立 Demo session 或同步收藏狀態。', error);
+    render();
   }
 
   synchronizeWebMcpTools();
+}
+
+async function synchronizeSavedEvents(): Promise<void> {
+  savedEventIds = await savedEventsApi.listSavedEventIds();
+  savedEventsError = null;
+  render();
+}
+
+async function saveSavedEventFromHumanUi(eventId: string): Promise<void> {
+  const result = await savedEventsApi.saveEvent(eventId);
+
+  if (result.status === 'error') {
+    savedEventsError = result.message;
+    render();
+
+    return;
+  }
+
+  lastRemovedEventId = null;
+  await synchronizeSavedEvents();
+}
+
+async function removeSavedEventFromHumanUi(eventId: string): Promise<void> {
+  const result = await savedEventsApi.removeEvent(eventId);
+
+  if (result.status === 'error') {
+    savedEventsError = result.message;
+    render();
+
+    return;
+  }
+
+  lastRemovedEventId = eventId;
+  await synchronizeSavedEvents();
 }
 
 function invokeSearchEventsForEvidence(form: HTMLFormElement): void {
@@ -388,7 +480,15 @@ appRoot.addEventListener('click', (event) => {
   }
 
   if (action === 'save') {
-    savedEventIds = toggleSavedEvent(savedEventIds, eventId);
+    void saveSavedEventFromHumanUi(eventId);
+  }
+
+  if (action === 'remove-saved') {
+    void removeSavedEventFromHumanUi(eventId);
+  }
+
+  if (action === 'undo-remove') {
+    void saveSavedEventFromHumanUi(eventId);
   }
 
   render();
