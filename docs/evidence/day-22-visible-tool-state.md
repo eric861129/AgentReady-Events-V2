@@ -25,6 +25,8 @@
 
 延遲 Demo session 的 request-order regression 會先攔住 `POST /api/demo-session`，確認尚未發出 `GET /api/saved-events`；release 後必須觀測到 `demo-session:complete`，才允許 `saved-events:list:start`。
 
+由於最小 Demo API 刻意只提供固定的 `demo-reader` principal，標準 `playwright.config.ts` 將一般 browser suite 固定為 `workers: 1`。這避免不同 browser test 的 session 共用同一份收藏 state；獨立 `playwright.button-copy-experiment.config.ts` 沒有繼承此設定。
+
 執行結果：
 
 ```text

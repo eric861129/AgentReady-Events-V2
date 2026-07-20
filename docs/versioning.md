@@ -43,7 +43,7 @@ Day 19 的發布快照以前述 Day 18 tag 為唯一前置版本；Day 20–26 �
 
 Day 1–18 的 SHA 僅作歷史紀錄與追溯用途；本階段不修改任何既有 ref。Day 18 的實際基線與 ancestor 證據見 [Day 19–26 基線紀錄](evidence/day-19-to-day-26-baseline.md)。
 
-Day 21 與 Day 22 都曾因審查發現的缺陷進行一次經授權的快照修訂。原 reader branch/tag 對應的 commit 已以獨立 archive branch 與 annotated archive tag 保存；修訂目的、邊界與 fresh clone 驗收規則見 [Day 21 快照修訂紀錄](evidence/day-21-snapshot-revision.md) 與 [Day 22 快照修訂紀錄](evidence/day-22-snapshot-revision.md)。此例外不授權修改 Day 1–20 或其他日期的既有 ref。
+Day 21 曾因審查發現的缺陷進行一次經授權的快照修訂；Day 22 已進行兩次經授權的快照修訂。每次原 reader branch/tag 對應的 commit 都以獨立 archive branch 與 annotated archive tag 保存；修訂目的、邊界與 fresh clone 驗收規則見 [Day 21 快照修訂紀錄](evidence/day-21-snapshot-revision.md) 與 [Day 22 快照修訂紀錄](evidence/day-22-snapshot-revision.md)。此例外不授權修改 Day 1–20 或其他日期的既有 ref。
 
 ## Branch 對照表
 
@@ -67,10 +67,10 @@ Day 21 與 Day 22 都曾因審查發現的缺陷進行一次經授權的快照�
 | 16 | `day-16-agent-invocation` | `v0.1.0-day-16` | 待建立 |
 | 17 | `day-17-tool-results` | `v0.1.0-day-17` | 待建立 |
 | 18 | `day-18-tool-errors` | `v0.1.0-day-18` | 待建立 |
-| 19 | `day-19-side-effect-boundaries` | `v0.1.0-day-19` | 待建立 |
-| 20 | `day-20-human-in-the-loop` | `v0.1.0-day-20` | 待建立 |
+| 19 | `day-19-side-effect-boundaries` | `v0.1.0-day-19` | 已發布 |
+| 20 | `day-20-human-confirmation` | `v0.1.0-day-20` | 已發布 |
 | 21 | `day-21-save-event` | `v0.1.0-day-21` | 已修訂並封存原快照 |
-| 22 | `day-22-visible-tool-state` | `v0.1.0-day-22` | 已修訂並封存原快照 |
+| 22 | `day-22-visible-tool-state` | `v0.1.0-day-22` | 已第二次修訂並封存前快照 |
 | 23 | `day-23-shared-use-case` | `v0.1.0-day-23` | 待建立 |
 | 24 | `day-24-tool-lifecycle` | `v0.1.0-day-24` | 待建立 |
 | 25 | `day-25-agent-journey` | `v0.1.0-day-25` | 待建立 |

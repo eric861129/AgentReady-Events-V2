@@ -53,3 +53,27 @@ npm run build
 4. working tree 乾淨，且所有命令 exit code 均為 0。
 
 實際 audit snapshot SHA 與 remote ref 驗證輸出記錄於 Task 6 report；本文件不預先宣稱尚未建立的最終文件 commit SHA。
+
+## 第二次修訂：browser suite shared-state isolation
+
+Day 22 第一次修訂後的正式 reader branch `day-22-visible-tool-state` 與 annotated tag `v0.1.0-day-22` 都指向：
+
+```text
+83bf62180217ddafd832be11c88e3ed6665b64d0
+```
+
+後續 re-review 確認最小 Demo API 有意使用唯一的 `demo-reader` principal。正常 Playwright browser suite 若並行執行，測試會共享同一份 server-side 收藏 state，因而可能產生不穩定的測試結果；這是 test isolation 問題，不應透過新增 test-only identity 或擴張授權模型解決。
+
+修正程式位於 commit `64b109551268e24532fe1b7cab661ea2e1232b7d`：
+
+- `playwright.config.ts` 僅針對一般 `tests/browser` suite 設定 `workers: 1`。
+- `tests/playwright-config.test.ts` 鎖定此設定與固定 principal 的理由。
+- `playwright.button-copy-experiment.config.ts` 不變；沒有修改 API identity、認證或 Day 23/24 功能。
+
+第一次修訂 snapshot 永久保留於：
+
+- archive branch：`archive/day-22-visible-tool-state-pre-parallel-fix`
+- annotated archive tag：`v0.1.0-day-22-pre-parallel-fix`
+- archive refs 的 peeled commit：`83bf62180217ddafd832be11c88e3ed6665b64d0`
+
+full gates 與 fresh clone 完成後，正式 Day 22 reader branch/tag 會移到含本隔離修正與本段審計紀錄的 final correction commit。遠端更新前必須確認正式 ref 仍指向 `83bf621`；只允許對這兩個正式 Day 22 refs 使用精確的 `--force-with-lease`，archive refs 一律正常 push。
