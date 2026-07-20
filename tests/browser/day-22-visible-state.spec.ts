@@ -4,6 +4,12 @@ import { expect, test, type Page } from '@playwright/test';
 const eventId = 'event-frontend-summit';
 const eventTitle = '前端體驗設計小聚';
 
+test.afterEach(async ({ page }) => {
+  await page.evaluate(async (id) => {
+    await fetch(`/api/saved-events/${id}`, { method: 'DELETE', credentials: 'same-origin' });
+  }, eventId).catch(() => undefined);
+});
+
 test('Day 22：人類收藏、重載、取消與復原都以 server state 同步 UI', async ({ page }) => {
   const demoSessionResponse = page.waitForResponse((response) => (
     response.url().includes('/api/demo-session') && response.request().method() === 'POST'
@@ -64,6 +70,9 @@ test('Day 22：人類收藏、重載、取消與復原都以 server state 同步
 
   await mkdir('output/playwright', { recursive: true });
   await page.screenshot({ path: 'output/playwright/day-22-visible-tool-state.png', fullPage: true });
+  await page.evaluate(async (id) => {
+    await fetch(`/api/saved-events/${id}`, { method: 'DELETE', credentials: 'same-origin' });
+  }, eventId);
 });
 
 test('browser test double：save_event 成功後同步活動卡、詳情與收藏清單', async ({ page }) => {
