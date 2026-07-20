@@ -20,6 +20,10 @@
 
 下表的 input/output 由 `tests/integration/day-25-agent-journey.test.ts` 與
 `tests/browser/day-25-agent-journey.spec.ts` 鎖定。兩者都明示為 test double。
+每一個 Tool invocation step 另保存 `rawOutput`，其值是 `executeTool()` 原樣回傳的
+JSON transport string；表中的 `output` 則是由同一筆 `rawOutput` 經 `JSON.parse()`
+得到、供 assertions 使用的 structured value。browser 導覽不是 Tool invocation，
+因此導覽 step 只有 structured `output`，沒有 `rawOutput`。
 
 | 步驟 | input | output | 執行後 `availableTools` | 文字型 `uiEvidence` |
 | --- | --- | --- | --- | --- |
@@ -60,10 +64,17 @@
 
 Playwright attachment 固定命名為
 `day-25-agent-journey-browser-test-double.json`，內容包含每一步 input/output、
-執行後 Tool inventory、導覽 URL 與當下 UI 文字。browser test 會重新 parse 即將附加
-的同一份 JSON bytes，確認四個 step 都有 `input`、`output`、`availableTools`、
-`uiEvidence`，並逐階段比對搜尋結果、詳情 dialog 與收藏後 state。這個 attachment 是
-browser test-double 的結構化 raw test evidence，不是原生 Agent 或文章用最終截圖。
+執行後 Tool inventory、導覽 URL 與當下 UI 文字；三個 Tool invocation step 還包含
+`rawOutput`。attachment 本身是結構化 JSON，序列化時 `rawOutput` 會成為 JSON string
+欄位；重新 parse attachment 後，該欄位值仍逐字等於 `executeTool()` 回傳字串，不是由
+structured `output` 重新 `JSON.stringify()` 的替代品。
+
+browser test 會重新 parse 即將附加的同一份 JSON bytes，確認四個 step 都有 `input`、
+`output`、`availableTools`、`uiEvidence`，並確認三個 invocation step 都有字串型
+`rawOutput`，且 `JSON.parse(rawOutput)` 深度等於同 step 的 `output`。integration
+regression 另以含換行與縮排的 JSON transport string 驗證逐字保存；若未保存 raw
+string，或改從 parsed object 重新序列化，測試都會失敗。這份 attachment 是保存 raw
+Tool response string 的 browser test-double 證據，不是原生 Agent 或文章用最終截圖。
 
 ## 停止條件與無副作用證據
 
