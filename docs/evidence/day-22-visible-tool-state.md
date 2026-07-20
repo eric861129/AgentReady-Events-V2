@@ -6,6 +6,7 @@
 
 - 頁面啟動順序是先 `POST /api/demo-session`，再 `GET /api/saved-events`；畫面中的 `savedEventIds` 是 server state 的 render snapshot，而不是本地 toggle 的權威資料。
 - 人類從活動卡收藏後，活動卡、詳情中的收藏狀態與「我的收藏」清單都會在重新讀取 server state 後更新。
+- `save_event` 成功後也會以窄範圍 callback 重新讀取 server state，讓活動卡、目前詳情與「我的收藏」同步更新；Tool 的 input/output contract 與「取消收藏不屬於 Tool」的邊界不變。
 - 同一個 API process 中重新載入頁面後，收藏仍可見；頁面重新建立 Demo session 後再讀取同一 server principal 的收藏清單。
 - 「取消收藏」只由人類 UI 發出 `DELETE /api/saved-events/:eventId`。它不是 WebMCP Tool；畫面提供「復原收藏」，並以 `PUT` 回復。
 
@@ -20,11 +21,15 @@
 5. 按「取消收藏」後，request trace 必須包含 `DELETE`；詳情改為「尚未收藏」，並出現 UI undo。
 6. 按「復原收藏」後，request trace 中剛好有兩個人類流程的 `PUT`（首次收藏與 undo），畫面回到已收藏。
 
+另有明確標示為 **browser test double** 的 `save_event` regression：它從目前詳情取得已註冊的 Tool object、以 JSON 字串呼叫，並在回傳成功後驗證三個人類可見 surface 都已更新。這只能證明 adapter／頁面整合，不是 native Agent proof。
+
+延遲 Demo session 的 request-order regression 會先攔住 `POST /api/demo-session`，確認尚未發出 `GET /api/saved-events`；release 後必須觀測到 `demo-session:complete`，才允許 `saved-events:list:start`。
+
 執行結果：
 
 ```text
 npm run test:browser -- --reporter=line
-11 passed
+13 passed
 ```
 
 最後的 UI 截圖由此測試輸出至 `output/playwright/day-22-visible-tool-state.png`（gitignore 的可重現 artifact）。它顯示「我的收藏」及取消收藏按鈕；此截圖是人類 UI 證據，不是 native Agent／Tool discovery 證據。
@@ -34,6 +39,7 @@ npm run test:browser -- --reporter=line
 - Day 22 沒有註冊 delete/remove Tool，`save_event` 的既有行為與 Day 21 route lifecycle 不變。
 - 此頁面在一般 browser 下仍誠實顯示 `document.modelContext` unsupported；本日測試不把 Playwright UI 成功宣稱為 native WebMCP 或 AI Agent 成功。
 - 既有 `webmcp-runtime.spec.ts` 中的 browser test double 只適用於 Day 21 `save_event` registration/invocation adapter 整合，不能作為 Day 22 native Agent 證據。
+- Day 22 的 browser test double 只用於驗證 `save_event` 成功後 UI hydration 的 adapter／頁面整合；同樣不是 native WebMCP 或 AI Agent 證據。
 
 ## 刻意未做
 
