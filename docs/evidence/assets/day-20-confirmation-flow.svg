@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Day 20 人類確認報名流程</title>
+  <desc id="desc">AI 僅建立準備報名草稿；網站顯示活動、個資與送出影響，使用者再按確認送出。確認按鈕不是 WebMCP Tool。</desc>
+  <style>
+    .title { font: 700 32px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #172033; }
+    .subtitle { font: 500 18px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #536174; }
+    .head { font: 700 21px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #172033; }
+    .copy { font: 500 17px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #334155; }
+    .button { font: 700 20px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #fff; }
+    .note { font: 700 18px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; fill: #8b2230; }
+  </style>
+  <rect width="1200" height="760" fill="#f7f9fc"/>
+  <text x="60" y="62" class="title">Day 20：高責任動作必須由人類確認</text>
+  <text x="60" y="96" class="subtitle">Evidence type: design boundary</text>
+  <rect x="60" y="140" width="280" height="220" rx="16" fill="#e9f2ff" stroke="#9cbce7" stroke-width="2"/>
+  <text x="88" y="182" class="head">AI：準備報名草稿</text>
+  <text x="88" y="220" class="copy">• 協助整理已知資料</text>
+  <text x="88" y="250" class="copy">• 不自行送出</text>
+  <text x="88" y="280" class="copy">• 交回網站供檢視</text>
+  <path d="M365 250 H455" stroke="#486b9d" stroke-width="5"/><path d="M455 250 l-18 -12 v24 z" fill="#486b9d"/>
+  <rect x="480" y="130" width="660" height="450" rx="16" fill="#fff" stroke="#b9c5d6" stroke-width="2"/>
+  <text x="520" y="177" class="head">網站：準備報名確認頁</text>
+  <line x1="520" y1="198" x2="1100" y2="198" stroke="#d8e0eb"/>
+  <text x="520" y="240" class="copy">活動：夏日程式設計工作坊</text>
+  <text x="520" y="278" class="copy">日期與地點：2026/08/08　創客教室</text>
+  <text x="520" y="336" class="copy">個資：姓名、聯絡方式、必要報名資料</text>
+  <rect x="520" y="374" width="580" height="76" rx="10" fill="#fff7e7" stroke="#e7c678"/>
+  <text x="546" y="405" class="head">送出影響</text>
+  <text x="546" y="432" class="copy">可能占用名額、產生通知或後續參與義務</text>
+  <rect x="520" y="482" width="160" height="52" rx="8" fill="#fff" stroke="#60738f" stroke-width="2"/>
+  <text x="546" y="515" class="head">返回修改</text>
+  <rect x="700" y="482" width="170" height="52" rx="8" fill="#fff" stroke="#60738f" stroke-width="2"/>
+  <text x="730" y="515" class="head">放棄草稿</text>
+  <rect x="890" y="482" width="210" height="52" rx="8" fill="#ae3142"/>
+  <text x="920" y="515" class="button">確認送出</text>
+  <path d="M995 548 V650 H810" stroke="#ae3142" stroke-width="3" fill="none"/>
+  <rect x="430" y="620" width="380" height="74" rx="12" fill="#fcebed" stroke="#d88b96" stroke-width="2"/>
+  <text x="458" y="651" class="note">人類的最終同意</text>
+  <text x="458" y="678" class="copy">此確認按鈕不是 WebMCP Tool</text>
+  <text x="60" y="730" class="subtitle">確認前：可閱讀、可修改、可放棄。確認後：才由網站依既有規則繼續。</text>
+</svg>
