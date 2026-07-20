@@ -355,7 +355,9 @@ function synchronizeWebMcpTools(): void {
   });
   const tools = selectedEventId === null
     ? [searchTool]
-    : [searchTool, createSaveEventTool(saveEventUseCase)];
+    : [searchTool, createSaveEventTool(saveEventUseCase, {
+        onSaveSuccess: synchronizeSavedEventsAfterToolInvocation
+      })];
 
   enqueueSearchEventsRuntimeOperation(() => searchEventsRuntime.replaceTools(tools));
 }
@@ -377,6 +379,16 @@ async function synchronizeSavedEvents(): Promise<void> {
   savedEventIds = await savedEventsApi.listSavedEventIds();
   savedEventsError = null;
   render();
+}
+
+async function synchronizeSavedEventsAfterToolInvocation(): Promise<void> {
+  try {
+    await synchronizeSavedEvents();
+  } catch (error) {
+    savedEventsError = '收藏已完成，但無法同步畫面狀態，請重新載入頁面。';
+    console.error('save_event 成功後無法同步收藏狀態。', error);
+    render();
+  }
 }
 
 async function saveSavedEventFromHumanUi(eventId: string): Promise<void> {

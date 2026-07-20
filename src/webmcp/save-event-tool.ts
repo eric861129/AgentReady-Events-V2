@@ -10,8 +10,16 @@ const invalidArgumentResponse = {
   guidance: '請使用目前活動詳情 route 顯示的 canonical eventId，且不要夾帶 userId。'
 } as const;
 
+export interface SaveEventToolOptions {
+  /** 收藏成功後，由呼叫端同步人類可見的 server state。 */
+  readonly onSaveSuccess?: () => Promise<void> | void;
+}
+
 /** 建立只加入收藏、不提供取消收藏能力的 WebMCP Tool。 */
-export function createSaveEventTool(useCase: SaveEventUseCase): WebMcpToolDefinition {
+export function createSaveEventTool(
+  useCase: SaveEventUseCase,
+  options: SaveEventToolOptions = {}
+): WebMcpToolDefinition {
   return {
     name: SAVE_EVENT_TOOL_NAME,
     description: '收藏目前顯示的活動；重複執行安全；若要取消收藏，交由使用者在網站 UI 操作。',
@@ -36,7 +44,13 @@ export function createSaveEventTool(useCase: SaveEventUseCase): WebMcpToolDefini
         return JSON.stringify(invalidArgumentResponse);
       }
 
-      return JSON.stringify(await useCase.execute(command));
+      const result = await useCase.execute(command);
+
+      if (result.status === 'ok') {
+        await options.onSaveSuccess?.();
+      }
+
+      return JSON.stringify(result);
     }
   };
 }
