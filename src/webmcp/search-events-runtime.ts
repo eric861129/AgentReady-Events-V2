@@ -29,16 +29,20 @@ export class SearchEventsRuntime {
   private registrationSucceeded = false;
   private snapshot: SearchEventsRuntimeSnapshot;
   private readonly adapter: WebMcpRuntimeAdapter;
+  private readonly detailUrlFor: (eventId: string) => string;
   private readonly toolOptions?: SearchEventsToolOptions;
 
   constructor({
     adapter,
+    detailUrlFor,
     toolOptions
   }: {
     readonly adapter: WebMcpRuntimeAdapter;
+    readonly detailUrlFor: (eventId: string) => string;
     readonly toolOptions?: SearchEventsToolOptions;
   }) {
     this.adapter = adapter;
+    this.detailUrlFor = detailUrlFor;
     this.toolOptions = toolOptions;
     this.snapshot = !adapter.supported
       ? createUnsupportedSnapshot()
@@ -67,7 +71,10 @@ export class SearchEventsRuntime {
   }
 
   private async initializeInternal(): Promise<SearchEventsRuntimeSnapshot> {
-    return this.replaceToolsInternal([createSearchEventsTool(this.toolOptions)]);
+    return this.replaceToolsInternal([createSearchEventsTool({
+      ...this.toolOptions,
+      detailUrlFor: this.detailUrlFor
+    })]);
   }
 
   private async replaceToolsInternal(
@@ -84,13 +91,15 @@ export class SearchEventsRuntime {
     try {
       await this.adapter.replaceTools(tools);
       const discoveredTools = await this.adapter.getTools();
-      const toolNames = tools.map((tool) => tool.name).join('、');
+      const toolNames = tools.map((tool) => tool.name);
 
       this.registrationSucceeded = true;
       this.snapshot = {
         availability: 'registered',
         nativeSupport: true,
-        registrationStatus: `已透過 document.modelContext 註冊 ${toolNames}。`,
+        registrationStatus: toolNames.length === 0
+          ? '目前 route 不提供 WebMCP Tool。'
+          : `已透過 document.modelContext 註冊 ${toolNames.join('、')}。`,
         discoveredTools
       };
       return this.snapshot;

@@ -156,8 +156,8 @@ test('browser test double：延遲 Demo session 完成後不會把已開啟詳�
     .getByRole('button', { name: '查看詳情' })
     .click();
   await expect.poll(() => readRegisteredToolNames(page)).toEqual([
-    'save_event',
-    'search_events'
+    'get_event_details',
+    'save_event'
   ]);
 
   await releaseDemoSession(page);
@@ -165,8 +165,8 @@ test('browser test double：延遲 Demo session 完成後不會把已開啟詳�
   await expect.poll(() => readRegistrationCount(page)).toBeGreaterThanOrEqual(3);
 
   await expect.poll(() => readRegisteredToolNames(page)).toEqual([
-    'save_event',
-    'search_events'
+    'get_event_details',
+    'save_event'
   ]);
 });
 

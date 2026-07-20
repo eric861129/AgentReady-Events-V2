@@ -10,10 +10,14 @@ const discoveredTools: readonly ExposedTool[] = [
     inputSchema: '{"type":"object"}'
   }
 ];
+const detailUrlFor = (eventId: string): string => `https://events.example.test/?event=${eventId}`;
 
 describe('SearchEventsRuntime', () => {
   it('未支援時回傳誠實的 unsupported snapshot', async () => {
-    const runtime = new SearchEventsRuntime({ adapter: createAdapter({ supported: false }) });
+    const runtime = new SearchEventsRuntime({
+      adapter: createAdapter({ supported: false }),
+      detailUrlFor
+    });
 
     await expect(runtime.initialize()).resolves.toEqual({
       availability: 'unsupported',
@@ -25,7 +29,7 @@ describe('SearchEventsRuntime', () => {
 
   it('支援時註冊 search_events 並讀取目前 Tool', async () => {
     const adapter = createAdapter();
-    const runtime = new SearchEventsRuntime({ adapter });
+    const runtime = new SearchEventsRuntime({ adapter, detailUrlFor });
 
     const snapshot = await runtime.initialize();
 
@@ -45,6 +49,7 @@ describe('SearchEventsRuntime', () => {
     const adapter = createAdapter();
     const runtime = new SearchEventsRuntime({
       adapter,
+      detailUrlFor,
       toolOptions: { isTemporarilyUnavailable: () => true }
     });
 
@@ -57,9 +62,27 @@ describe('SearchEventsRuntime', () => {
     });
   });
 
+  it('將明確的 detailUrlFor dependency 傳給 search_events output mapping', async () => {
+    const adapter = createAdapter();
+    const runtime = new SearchEventsRuntime({
+      adapter,
+      detailUrlFor
+    });
+
+    await runtime.initialize();
+
+    const registeredTool = vi.mocked(adapter.replaceTools).mock.calls[0]?.[0]?.[0] as WebMcpToolDefinition;
+    expect(JSON.parse(registeredTool.execute({ query: '前端' }) as string)).toMatchObject({
+      results: [{
+        eventId: 'event-frontend-summit',
+        detailUrl: 'https://events.example.test/?event=event-frontend-summit'
+      }]
+    });
+  });
+
   it('以原生 executeTool 呼叫 search_events', async () => {
     const adapter = createAdapter();
-    const runtime = new SearchEventsRuntime({ adapter });
+    const runtime = new SearchEventsRuntime({ adapter, detailUrlFor });
     await runtime.initialize();
 
     await runtime.invokeForEvidence({ query: '前端' });
@@ -74,7 +97,7 @@ describe('SearchEventsRuntime', () => {
     const adapter = createAdapter({
       executeResult: { status: 'ok', count: 1 }
     });
-    const runtime = new SearchEventsRuntime({ adapter });
+    const runtime = new SearchEventsRuntime({ adapter, detailUrlFor });
     await runtime.initialize();
 
     const snapshot = await runtime.invokeForEvidence({ query: '前端' });
@@ -90,7 +113,7 @@ describe('SearchEventsRuntime', () => {
     const adapter = createAdapter({
       registerError: new Error('瀏覽器拒絕註冊 Tool')
     });
-    const runtime = new SearchEventsRuntime({ adapter });
+    const runtime = new SearchEventsRuntime({ adapter, detailUrlFor });
 
     await expect(runtime.initialize()).resolves.toEqual({
       availability: 'failed',
@@ -105,7 +128,7 @@ describe('SearchEventsRuntime', () => {
     const adapter = createAdapter({
       registerError: new Error('瀏覽器拒絕註冊 Tool')
     });
-    const runtime = new SearchEventsRuntime({ adapter });
+    const runtime = new SearchEventsRuntime({ adapter, detailUrlFor });
     const failedRegistration = await runtime.initialize();
 
     const snapshot = await runtime.invokeForEvidence({ query: '前端' });
@@ -118,7 +141,7 @@ describe('SearchEventsRuntime', () => {
     const adapter = createAdapter({
       getToolsError: new Error('瀏覽器拒絕發現 Tool')
     });
-    const runtime = new SearchEventsRuntime({ adapter });
+    const runtime = new SearchEventsRuntime({ adapter, detailUrlFor });
 
     const failedDiscovery = await runtime.initialize();
     const invocationSnapshot = await runtime.invokeForEvidence({ query: '前端' });
@@ -139,7 +162,7 @@ describe('SearchEventsRuntime', () => {
     const adapter = createAdapter({
       executeError: new Error('Browser API 拒絕呼叫 Tool')
     });
-    const runtime = new SearchEventsRuntime({ adapter });
+    const runtime = new SearchEventsRuntime({ adapter, detailUrlFor });
     await runtime.initialize();
 
     await expect(runtime.invokeForEvidence({ query: '前端' })).resolves.toEqual({
@@ -154,7 +177,7 @@ describe('SearchEventsRuntime', () => {
   it('直接並行 initialize 與 invocation 時由 Runtime 依序完成', async () => {
     const registrationGate = createDeferred();
     const adapter = createAdapter({ registrationGate: registrationGate.promise });
-    const runtime = new SearchEventsRuntime({ adapter });
+    const runtime = new SearchEventsRuntime({ adapter, detailUrlFor });
 
     const initialization = runtime.initialize();
     const invocation = runtime.invokeForEvidence({ query: '前端' });

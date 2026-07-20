@@ -5,8 +5,12 @@ import {
 } from '../src/webmcp/search-events-tool';
 
 describe('createSearchEventsTool', () => {
+  const detailUrlFor = (eventId: string): string => (
+    `https://events.example.test/?event=${eventId}`
+  );
+
   it('exposes the formal read-only search_events contract', () => {
-    const tool = createSearchEventsTool();
+    const tool = createSearchEventsTool({ detailUrlFor });
 
     expect(tool.name).toBe(SEARCH_EVENTS_TOOL_NAME);
     expect(tool.name).toBe('search_events');
@@ -34,15 +38,21 @@ describe('createSearchEventsTool', () => {
   });
 
   it('serializes a successful search response as JSON', () => {
-    const tool = createSearchEventsTool();
+    const tool = createSearchEventsTool({ detailUrlFor });
     const response = tool.execute({ query: '前端' });
 
     expect(typeof response).toBe('string');
-    expect(JSON.parse(response as string)).toMatchObject({ status: 'ok' });
+    expect(JSON.parse(response as string)).toMatchObject({
+      status: 'ok',
+      results: [{
+        eventId: 'event-frontend-summit',
+        detailUrl: 'https://events.example.test/?event=event-frontend-summit'
+      }]
+    });
   });
 
   it('serializes invalid input as an INVALID_ARGUMENT JSON response', () => {
-    const tool = createSearchEventsTool();
+    const tool = createSearchEventsTool({ detailUrlFor });
     const response = tool.execute({ query: '' });
 
     expect(typeof response).toBe('string');

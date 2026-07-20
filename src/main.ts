@@ -2,13 +2,16 @@
 
 import { events, searchEvents, type EventItem } from './domain/events';
 import { createSaveEventUseCase } from './application/save-event';
+import { readEventRoute } from './client/event-route';
 import { createSavedEventsApi } from './client/saved-events-api';
+import { createEventDetailUrl } from './domain/event-detail-url';
+import { findEventById } from './domain/event-catalog';
 import { createDeclarativeToolPreview, type DeclarativeToolDefinition } from './labs/declarative-preview';
 import { createSaveEventHumanUiHandler } from './ui/save-event-handler';
-import { createSaveEventTool } from './webmcp/save-event-tool';
+import { CurrentEventToolLifecycle } from './webmcp/current-event-tool-lifecycle';
 import { SearchEventsRuntime, type SearchEventsRuntimeSnapshot } from './webmcp/search-events-runtime';
 import { createSearchEventsTool } from './webmcp/search-events-tool';
-import { createWebMcpAdapter } from './webmcp/webmcp-adapter';
+import { createWebMcpAdapter, type WebMcpAdapter } from './webmcp/webmcp-adapter';
 import './styles.css';
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -20,18 +23,21 @@ if (app === null) {
 const appRoot = app;
 const webMcpAdapter = createWebMcpAdapter(document);
 const savedEventsApi = createSavedEventsApi(window.fetch.bind(window));
+let eventRoute = readEventRoute(window.location.search);
+const detailUrlFor = (eventId: string): string => createEventDetailUrl(window.location.href, eventId);
 const temporaryFailureEvidenceScenario =
   import.meta.env.DEV &&
   new URLSearchParams(window.location.search).get('evidenceScenario') === 'temporary-unavailable';
 const searchEventsRuntime = new SearchEventsRuntime({
   adapter: webMcpAdapter,
+  detailUrlFor,
   toolOptions: {
     isTemporarilyUnavailable: () => temporaryFailureEvidenceScenario
   }
 });
 const saveEventUseCase = createSaveEventUseCase({
   api: savedEventsApi,
-  getCurrentRoute: () => selectedEventId === null ? null : { eventId: selectedEventId }
+  getCurrentRoute: () => eventRoute.kind === 'detail' ? { eventId: eventRoute.eventId } : null
 });
 const saveEventFromHumanUi = createSaveEventHumanUiHandler(saveEventUseCase, {
   onSaveSuccess: async () => {
@@ -49,10 +55,27 @@ let visibleEvents: readonly EventItem[] = events;
 let savedEventIds: readonly string[] = [];
 let savedEventsError: string | null = null;
 let lastRemovedEventId: string | null = null;
-let selectedEventId: string | null = null;
 let searchEventsRuntimeSnapshot: SearchEventsRuntimeSnapshot | null = null;
 let nativeToolQuery = '前端';
 let searchEventsRuntimeOperation: Promise<void> = Promise.resolve();
+const lifecycleAdapter: WebMcpAdapter = {
+  async replaceTools(tools): Promise<void> {
+    searchEventsRuntimeSnapshot = await searchEventsRuntime.replaceTools(tools);
+  },
+  clearTools(): void {
+    webMcpAdapter.clearTools();
+  }
+};
+const currentEventToolLifecycle = new CurrentEventToolLifecycle({
+  adapter: lifecycleAdapter,
+  createSearchTool: () => createSearchEventsTool({
+    detailUrlFor,
+    isTemporarilyUnavailable: () => temporaryFailureEvidenceScenario
+  }),
+  getEventDetails: findEventById,
+  saveEventUseCase,
+  onSaveSuccess: synchronizeSavedEventsAfterToolInvocation
+});
 
 const declarativeSearchLabDefinition: DeclarativeToolDefinition = {
   toolname: 'search_events_lab',
@@ -180,6 +203,7 @@ result: 活動摘要清單</code></pre>
 function renderEventCard(event: EventItem): string {
   const isSaved = savedEventIds.includes(event.id);
   const saveLabel = isSaved ? '已收藏' : '收藏活動';
+  const detailUrl = detailUrlFor(event.id);
 
   return `
     <article class="event-card" data-event-id="${event.id}">
@@ -191,7 +215,7 @@ function renderEventCard(event: EventItem): string {
       <p>${event.summary}</p>
       <p class="event-card__location">${event.location}</p>
       <div class="event-card__actions">
-        <button class="event-card__detail" type="button" data-action="detail" data-event-id="${event.id}">查看詳情</button>
+        <a class="event-card__detail" role="button" href="${escapeHtml(detailUrl)}" data-action="detail" data-event-id="${event.id}">查看詳情</a>
         <button type="button" data-action="save" data-event-id="${event.id}" aria-pressed="${isSaved}" ${isSaved ? 'disabled' : ''}>${saveLabel}</button>
       </div>
     </article>
@@ -239,7 +263,22 @@ function renderDeclarativeSearchLab(): string {
 }
 
 function renderEventDetail(): string {
-  const selectedEvent = events.find((event) => event.id === selectedEventId);
+  const route = eventRoute;
+
+  if (route.kind === 'not-found') {
+    return `
+      <section class="event-not-found" data-testid="event-not-found" aria-labelledby="event-not-found-title">
+        <p class="section-label">活動不存在</p>
+        <h2 id="event-not-found-title">找不到指定的活動</h2>
+        <p>eventId「${escapeHtml(route.eventId)}」不在目前活動清單中。</p>
+        <a href="/">返回活動搜尋</a>
+      </section>
+    `;
+  }
+
+  const selectedEvent = route.kind === 'detail'
+    ? events.find((event) => event.id === route.eventId)
+    : undefined;
 
   if (selectedEvent === undefined) {
     return '';
@@ -248,7 +287,7 @@ function renderEventDetail(): string {
   return `
     <div class="dialog-backdrop">
       <section class="event-dialog" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title">
-        <button class="dialog-close" type="button" data-action="close-detail" aria-label="關閉詳情">×</button>
+        <a class="dialog-close" role="button" href="/" data-action="close-detail" aria-label="關閉詳情">×</a>
         <p class="section-label">${selectedEvent.category}｜${formatDate(selectedEvent.date)}</p>
         <h2 id="event-dialog-title">${selectedEvent.title}</h2>
         <p>${selectedEvent.summary}</p>
@@ -361,16 +400,10 @@ function enqueueSearchEventsRuntimeOperation(
 }
 
 function synchronizeWebMcpTools(): void {
-  const searchTool = createSearchEventsTool({
-    isTemporarilyUnavailable: () => temporaryFailureEvidenceScenario
+  searchEventsRuntimeOperation = searchEventsRuntimeOperation.then(async () => {
+    await currentEventToolLifecycle.sync(eventRoute);
+    render();
   });
-  const tools = selectedEventId === null
-    ? [searchTool]
-    : [searchTool, createSaveEventTool(saveEventUseCase, {
-        onSaveSuccess: synchronizeSavedEventsAfterToolInvocation
-      })];
-
-  enqueueSearchEventsRuntimeOperation(() => searchEventsRuntime.replaceTools(tools));
 }
 
 async function initializeApplication(): Promise<void> {
@@ -467,12 +500,17 @@ appRoot.addEventListener('input', (event) => {
 });
 
 appRoot.addEventListener('click', (event) => {
-  const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('button[data-action]') : null;
-  const action = button?.dataset.action;
-  const eventId = button?.dataset.eventId;
+  const actionElement = event.target instanceof Element
+    ? event.target.closest<HTMLElement>('[data-action]')
+    : null;
+  const action = actionElement?.dataset.action;
+  const eventId = actionElement?.dataset.eventId;
 
-  if (action === 'close-detail') {
-    selectedEventId = null;
+  if (actionElement instanceof HTMLAnchorElement && (action === 'detail' || action === 'close-detail')) {
+    event.preventDefault();
+    const targetUrl = new URL(actionElement.href);
+    window.history.pushState(null, '', targetUrl);
+    eventRoute = readEventRoute(targetUrl.search);
     synchronizeWebMcpTools();
     render();
 
@@ -481,11 +519,6 @@ appRoot.addEventListener('click', (event) => {
 
   if (eventId === undefined) {
     return;
-  }
-
-  if (action === 'detail') {
-    selectedEventId = eventId;
-    synchronizeWebMcpTools();
   }
 
   if (action === 'save') {
@@ -500,6 +533,12 @@ appRoot.addEventListener('click', (event) => {
     void saveEventFromHumanUi(eventId);
   }
 
+  render();
+});
+
+window.addEventListener('popstate', () => {
+  eventRoute = readEventRoute(window.location.search);
+  synchronizeWebMcpTools();
   render();
 });
 
