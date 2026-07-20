@@ -29,6 +29,20 @@ git switch day-14-declarative-search-tool
 4. 從已驗證的 `main` 建立 `day-XX-<slug>`，並建立 `v0.x.0-day-XX` tag。
 5. 文章連到 branch 或 tag；之後不得直接修改 `day-XX-*`。
 
+## Day 19–26 漸進式開發規則
+
+Day 19–26 的後半段開發一律從不可變的 Day 18 基線 `v0.1.0-day-18`（`615ee1c`）開始，集中在 `feature/day-19-to-day-26-agent-journey` 進行。建立該 worktree 時必須指定 tag，不得從目前 checkout 複製檔案：
+
+```powershell
+git -C D:\MySelf\iThome-2026\WebMCP\AgentReady-Events-V2 worktree add `
+  D:\MySelf\iThome-2026\WebMCP\AgentReady-Events-V2-day19-26 `
+  -b feature/day-19-to-day-26-agent-journey v0.1.0-day-18
+```
+
+Day 19 的發布快照以前述 Day 18 tag 為唯一前置版本；Day 20–26 依序以前一天的不可變 tag 為前置版本。每一天完成驗證後，才建立下表的 reader branch 與 tag；建立後不得重寫或移動。開發過程可持續保留在 feature branch，但不可回寫 Day 1–18 的 branch 或 tag。
+
+Day 1–18 的 SHA 僅作歷史紀錄與追溯用途；本階段不修改任何既有 ref。Day 18 的實際基線與 ancestor 證據見 [Day 19–26 基線紀錄](evidence/day-19-to-day-26-baseline.md)。
+
 ## Branch 對照表
 
 | Day | Reader branch | Tag | 狀態 |
