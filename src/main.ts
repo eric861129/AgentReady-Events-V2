@@ -294,10 +294,6 @@ function enqueueSearchEventsRuntimeOperation(
   });
 }
 
-function initializeSearchEventsRuntime(): void {
-  enqueueSearchEventsRuntimeOperation(() => searchEventsRuntime.initialize());
-}
-
 function synchronizeWebMcpTools(): void {
   const searchTool = createSearchEventsTool({
     isTemporarilyUnavailable: () => temporaryFailureEvidenceScenario
@@ -316,7 +312,7 @@ async function initializeApplication(): Promise<void> {
     console.error('無法建立 Demo session，save_event 將由 API 回報失敗。', error);
   }
 
-  initializeSearchEventsRuntime();
+  synchronizeWebMcpTools();
 }
 
 function invokeSearchEventsForEvidence(form: HTMLFormElement): void {

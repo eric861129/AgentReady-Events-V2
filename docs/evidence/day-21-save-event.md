@@ -50,21 +50,26 @@ Tests 60 passed (60)
 |---|---|---|---|
 | Vitest adapter fake | `replaceTools()` 等待非同步註冊；replacement 與 `clearTools()` 都讓舊 signal 變成 aborted；manual invocation 收到 `(tool, jsonString)` | adapter 合約、等待順序、撤銷與參數轉譯 | 原生 Chrome 或 Agent 已發現 Tool |
 | Playwright browser test double | 詳情開啟前只有 `search_events`；開啟後出現 `save_event`；首次／重複收藏得到 `changed: true/false` | 頁面整合、descriptor、輸入與 API 寫入流程 | native Agent proof、Chrome Inspector discovery |
-| 實際 Chrome extension browser | 本機頁面 `document.modelContext`、`registerTool`、`getTools`、`executeTool` 均為 `undefined`；頁面顯示「document.modelContext 不可用」 | 此環境的原生 API unsupported state | 不可把 test double 結果當成原生成功 |
-| Model Context Tool Inspector | 本次 Chrome profile 沒有已開啟的 Inspector，且原生 API 為 unsupported，因此沒有 discovery／invocation 紀錄 | Inspector evidence 尚未取得 | 不宣稱 Inspector 曾成功執行 `save_event` |
+| 實際 Chrome executable | 2026-07-20，Chrome `150.0.7871.125`，實際 tab `http://127.0.0.1:5173/`；直接唯讀觀測 `document.modelContext`、`registerTool`、`getTools`、`executeTool` 均為 `undefined` | 此版本與該頁面的原生 API unsupported state | 不可把 test double 結果當成原生成功 |
+| Model Context Tool Inspector／截圖 | Inspector unavailable；browser extension screenshot 在 CDP `Page.captureScreenshot` timeout | 原生 Inspector／畫面證據未取得的完整失敗狀態 | 不宣稱 Inspector 曾發現或執行 `save_event`，也不製造替代截圖 |
 
 Browser test double 的完整結果：
 
 ```text
 npm run test:browser -- --reporter=line
-9 passed
+10 passed
 ```
 
-## 原生環境限制
+## 原生環境觀測與限制
 
-- Chrome 控制介面禁止導覽 `chrome://version`，因此本次不能安全取得完整 Chrome 版本；未以 PowerShell、CDP 或其他繞道方式規避該政策。
-- 同一原因，無法在本次自動化中讀取 `chrome://flags/#enable-webmcp-testing` 的實際值。官方文件仍指出本機測試需啟用該 flag，但本頁只記錄「flags 未能觀測」，不推定已啟用或未啟用。
-- 可重現的實際頁面觀測為：2026-07-20，Chrome extension browser，`http://127.0.0.1:4173/`，四個原生欄位皆為 `undefined`。這是 unsupported evidence，不是 native Agent invocation。
+- 日期：2026-07-20。
+- 實際 Chrome executable version：`150.0.7871.125`。
+- 實際 Chrome tab：`http://127.0.0.1:5173/`。
+- 直接唯讀結果：`document.modelContext`、`registerTool`、`getTools`、`executeTool` 全部為 `undefined`。
+- Flags：`not observed / no flags asserted`；不推定任何 WebMCP flag 已啟用或停用。
+- Model Context Tool Inspector：unavailable。
+- Browser extension screenshot：CDP `Page.captureScreenshot` timeout；沒有製造 Inspector screenshot，也沒有以其他畫面冒充。
+- 上述只證明這個版本、日期與 tab 的 unsupported state，不是 native Agent discovery 或 invocation。browser test double 證據仍只屬於 adapter／頁面整合測試。
 
 ## 刻意未做
 

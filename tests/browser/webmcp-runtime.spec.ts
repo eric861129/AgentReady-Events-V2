@@ -145,6 +145,31 @@ test('browser test double：save_event 只在活動詳情顯示，且同一活�
   ]);
 });
 
+test('browser test double：延遲 Demo session 完成後不會把已開啟詳情的 save_event 覆蓋掉', async ({ page }) => {
+  await installMultipleRegisteredToolsBrowserTestDouble(page);
+  await installDelayedDemoSessionFetch(page);
+  await page.goto('/');
+
+  await expect.poll(() => readDemoSessionState(page)).toMatchObject({ started: true });
+
+  await page.locator('[data-event-id="event-frontend-summit"]')
+    .getByRole('button', { name: '查看詳情' })
+    .click();
+  await expect.poll(() => readRegisteredToolNames(page)).toEqual([
+    'save_event',
+    'search_events'
+  ]);
+
+  await releaseDemoSession(page);
+  await expect.poll(() => readDemoSessionState(page)).toMatchObject({ completed: true });
+  await expect.poll(() => readRegistrationCount(page)).toBeGreaterThanOrEqual(3);
+
+  await expect.poll(() => readRegisteredToolNames(page)).toEqual([
+    'save_event',
+    'search_events'
+  ]);
+});
+
 test('延遲 document.modelContext browser test double 時依序完成註冊再 invocation 並保留輸入與最終證據', async ({ page }) => {
   await installDelayedModelContextBrowserTestDouble(page);
   await page.goto('/');
@@ -306,6 +331,11 @@ async function installMultipleRegisteredToolsBrowserTestDouble(page: Page): Prom
     };
     const registrations: Array<{ tool: RegisteredTool; signal?: AbortSignal }> = [];
 
+    Object.defineProperty(window, '__webMcpRegistrationLog', {
+      configurable: true,
+      value: registrations
+    });
+
     Object.defineProperty(document, 'modelContext', {
       configurable: true,
       value: {
@@ -337,6 +367,45 @@ async function installMultipleRegisteredToolsBrowserTestDouble(page: Page): Prom
   });
 }
 
+async function installDelayedDemoSessionFetch(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    let releaseGate = (): void => {};
+    const gate = new Promise<void>((resolve) => {
+      releaseGate = resolve;
+    });
+    const control = {
+      started: false,
+      completed: false,
+      release: () => releaseGate()
+    };
+    const originalFetch = window.fetch.bind(window);
+
+    Object.defineProperty(window, '__demoSessionControl', {
+      configurable: true,
+      value: control
+    });
+    window.fetch = async (...args) => {
+      const input = args[0];
+      const url = typeof input === 'string'
+        ? input
+        : input instanceof Request
+          ? input.url
+          : input.toString();
+
+      if (url.endsWith('/api/demo-session')) {
+        control.started = true;
+        await gate;
+        const response = await originalFetch(...args);
+        control.completed = true;
+
+        return response;
+      }
+
+      return originalFetch(...args);
+    };
+  });
+}
+
 async function readRegisteredToolNames(page: Page): Promise<string[]> {
   return page.evaluate(async () => {
     const context = (document as Document & {
@@ -344,5 +413,34 @@ async function readRegisteredToolNames(page: Page): Promise<string[]> {
     }).modelContext;
 
     return (await context.getTools()).map((tool) => tool.name).sort();
+  });
+}
+
+async function readRegistrationCount(page: Page): Promise<number> {
+  return page.evaluate(() => (
+    window as typeof window & { __webMcpRegistrationLog: unknown[] }
+  ).__webMcpRegistrationLog.length);
+}
+
+async function readDemoSessionState(page: Page): Promise<{
+  readonly started: boolean;
+  readonly completed: boolean;
+}> {
+  return page.evaluate(() => {
+    const control = (
+      window as typeof window & {
+        __demoSessionControl: { started: boolean; completed: boolean };
+      }
+    ).__demoSessionControl;
+
+    return { started: control.started, completed: control.completed };
+  });
+}
+
+async function releaseDemoSession(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (
+      window as typeof window & { __demoSessionControl: { release: () => void } }
+    ).__demoSessionControl.release();
   });
 }
