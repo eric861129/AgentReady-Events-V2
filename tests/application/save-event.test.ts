@@ -39,6 +39,23 @@ describe('createSaveEventUseCase', () => {
     expect(api.saveEvent).toHaveBeenCalledWith(knownEventId);
   });
 
+  it('未開啟活動詳情時，仍可供人類活動卡 UI 收藏', async () => {
+    const success: SaveEventSuccess = {
+      status: 'ok',
+      eventId: knownEventId,
+      saved: true,
+      changed: true
+    };
+    const api = createApi(success);
+    const useCase = createSaveEventUseCase({
+      api,
+      getCurrentRoute: () => null
+    });
+
+    await expect(useCase.execute({ eventId: knownEventId })).resolves.toEqual(success);
+    expect(api.saveEvent).toHaveBeenCalledWith(knownEventId);
+  });
+
   it.each([
     'UNAUTHENTICATED',
     'EVENT_NOT_FOUND',

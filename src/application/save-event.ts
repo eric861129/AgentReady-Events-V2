@@ -34,7 +34,7 @@ export function createSaveEventUseCase(dependencies: {
     async execute(command: SaveEventCommand): Promise<SaveEventResult> {
       const currentRoute = dependencies.getCurrentRoute();
 
-      if (currentRoute === null || currentRoute.eventId !== command.eventId) {
+      if (currentRoute !== null && currentRoute.eventId !== command.eventId) {
         return {
           status: 'error',
           errorCode: 'ROUTE_MISMATCH',

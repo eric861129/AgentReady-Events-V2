@@ -4,6 +4,7 @@ import { events, searchEvents, type EventItem } from './domain/events';
 import { createSaveEventUseCase } from './application/save-event';
 import { createSavedEventsApi } from './client/saved-events-api';
 import { createDeclarativeToolPreview, type DeclarativeToolDefinition } from './labs/declarative-preview';
+import { createSaveEventHumanUiHandler } from './ui/save-event-handler';
 import { createSaveEventTool } from './webmcp/save-event-tool';
 import { SearchEventsRuntime, type SearchEventsRuntimeSnapshot } from './webmcp/search-events-runtime';
 import { createSearchEventsTool } from './webmcp/search-events-tool';
@@ -31,6 +32,16 @@ const searchEventsRuntime = new SearchEventsRuntime({
 const saveEventUseCase = createSaveEventUseCase({
   api: savedEventsApi,
   getCurrentRoute: () => selectedEventId === null ? null : { eventId: selectedEventId }
+});
+const saveEventFromHumanUi = createSaveEventHumanUiHandler(saveEventUseCase, {
+  onSaveSuccess: async () => {
+    lastRemovedEventId = null;
+    await synchronizeSavedEvents();
+  },
+  onSaveError: (message) => {
+    savedEventsError = message;
+    render();
+  }
 });
 
 let activeQuery = '';
@@ -391,20 +402,6 @@ async function synchronizeSavedEventsAfterToolInvocation(): Promise<void> {
   }
 }
 
-async function saveSavedEventFromHumanUi(eventId: string): Promise<void> {
-  const result = await savedEventsApi.saveEvent(eventId);
-
-  if (result.status === 'error') {
-    savedEventsError = result.message;
-    render();
-
-    return;
-  }
-
-  lastRemovedEventId = null;
-  await synchronizeSavedEvents();
-}
-
 async function removeSavedEventFromHumanUi(eventId: string): Promise<void> {
   const result = await savedEventsApi.removeEvent(eventId);
 
@@ -492,7 +489,7 @@ appRoot.addEventListener('click', (event) => {
   }
 
   if (action === 'save') {
-    void saveSavedEventFromHumanUi(eventId);
+    void saveEventFromHumanUi(eventId);
   }
 
   if (action === 'remove-saved') {
@@ -500,7 +497,7 @@ appRoot.addEventListener('click', (event) => {
   }
 
   if (action === 'undo-remove') {
-    void saveSavedEventFromHumanUi(eventId);
+    void saveEventFromHumanUi(eventId);
   }
 
   render();
