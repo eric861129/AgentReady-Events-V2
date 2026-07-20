@@ -229,7 +229,7 @@ try {
       ['UI 收藏狀態', 'server 回傳後顯示「已收藏」'],
       ['Demo API PUT', `${saveResponse.status()} ${JSON.stringify(saveResponseBody)}`],
       ['Server GET', JSON.stringify(savedEventsResponse)],
-      ['Demo session', 'demo-reader；demo_session=HttpOnly；in-memory state']
+      ['Demo session', 'demo-reader；demo_session（HttpOnly cookie）；in-memory state']
     ]
   });
   await day26Page.getByRole('dialog', { name: '前端體驗設計小聚' }).screenshot({
