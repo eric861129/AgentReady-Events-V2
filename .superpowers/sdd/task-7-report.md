@@ -98,3 +98,26 @@ git clone --no-local --single-branch --branch v0.1.0-day-23 `
 | full `npm test` | 14 files, 64 passed |
 | `npm run test:browser` | 13 passed |
 | `npm run build` | passed; Vite completed in 143 ms |
+
+## Controlled public ref publication（2026-07-20）
+
+```powershell
+git push origin `
+  refs/heads/day-20-human-in-the-loop:refs/heads/day-20-human-in-the-loop `
+  refs/heads/day-23-shared-use-case:refs/heads/day-23-shared-use-case `
+  refs/heads/archive/day-23-shared-use-case-pre-review:refs/heads/archive/day-23-shared-use-case-pre-review `
+  refs/tags/v0.1.0-day-23:refs/tags/v0.1.0-day-23 `
+  refs/tags/v0.1.0-day-23-pre-review:refs/tags/v0.1.0-day-23-pre-review
+```
+
+All five requested refs were new on `origin`, so normal push succeeded and no `--force-with-lease` was needed. `git ls-remote` verified:
+
+| Remote ref | SHA / peeled commit |
+| --- | --- |
+| `refs/heads/day-20-human-in-the-loop` | `1e1fcde0e3212ced1c724b782d6e5231eac416d0` |
+| `refs/heads/archive/day-23-shared-use-case-pre-review` | `e29e30182179af45d4fa4a7afd3c8aeac7abe040` |
+| `refs/heads/day-23-shared-use-case` | `d9d1c8dd129c7bf3b94349e480d10bd0e8e531e2` |
+| `refs/tags/v0.1.0-day-23^{}` | `d9d1c8dd129c7bf3b94349e480d10bd0e8e531e2` |
+| `refs/tags/v0.1.0-day-23-pre-review^{}` | `e29e30182179af45d4fa4a7afd3c8aeac7abe040` |
+
+No `feature/*`, draft, or unrelated ref was pushed.
