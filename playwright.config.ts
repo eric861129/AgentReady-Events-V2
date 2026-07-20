@@ -5,6 +5,8 @@ const usesExternalServer = process.env.PLAYWRIGHT_BASE_URL !== undefined;
 
 export default defineConfig({
   testDir: './tests/browser',
+  // Demo API 使用固定 demo-reader principal，正常 browser suite 必須序列執行以隔離收藏 state。
+  workers: 1,
   use: {
     baseURL
   },
