@@ -79,6 +79,36 @@ describe('Day 25 Agent journey adapter fake test-double', () => {
     ]);
   });
 
+  it('逐字保存 Tool transport string，並另外提供 parsed output', async () => {
+    const rawSearchOutput = `{
+  "status": "ok",
+  "results": [
+    {
+      "eventId": "${canonicalEventId}",
+      "detailUrl": "${origin}?event=${canonicalEventId}"
+    }
+  ]
+}`;
+    const harness = await createJourneyHarness({
+      createSearchTool: () => ({
+        name: 'search_events',
+        description: '保留非 compact JSON transport string 的 regression test',
+        inputSchema: { type: 'object' },
+        execute: () => rawSearchOutput
+      })
+    });
+
+    const result = await runDay25AgentJourneyTestDouble(harness.client, { query: '前端' });
+    const searchStep = result.steps.find((step) => (
+      step.action === 'invoke' && step.toolName === 'search_events'
+    ));
+
+    expect(searchStep).toMatchObject({
+      rawOutput: rawSearchOutput,
+      output: JSON.parse(rawSearchOutput) as unknown
+    });
+  });
+
   it('搜尋結果陣列為空時立即停止且不導覽、不呼叫詳情或收藏', async () => {
     const harness = await createJourneyHarness({
       createSearchTool: () => createStaticTool('search_events', {
@@ -141,14 +171,14 @@ describe('Day 25 Agent journey adapter fake test-double', () => {
     const client: Day25JourneyTestDoubleClient = {
       ...harness.client,
       async executeTool(toolName, input) {
-        const output = await harness.client.executeTool(toolName, input);
+        const rawOutput = await harness.client.executeTool(toolName, input);
 
-        return toolName === 'save_event' ? {
+        return toolName === 'save_event' ? JSON.stringify({
           status: 'ok',
           eventId: canonicalEventId,
           saved: true,
           changed: false
-        } : output;
+        }) : rawOutput;
       }
     };
 
@@ -165,13 +195,13 @@ describe('Day 25 Agent journey adapter fake test-double', () => {
     const client: Day25JourneyTestDoubleClient = {
       ...harness.client,
       async executeTool(toolName, input) {
-        const output = await harness.client.executeTool(toolName, input);
+        const rawOutput = await harness.client.executeTool(toolName, input);
 
-        return toolName === 'save_event' ? {
+        return toolName === 'save_event' ? JSON.stringify({
           status: 'ok',
           eventId: canonicalEventId,
           saved: true
-        } : output;
+        }) : rawOutput;
       }
     };
 
@@ -248,8 +278,13 @@ async function createJourneyHarness(overrides: {
           throw new Error(`adapter fake 找不到目前 route 的 Tool：${toolName}`);
         }
 
-        const output = await tool.execute(input);
-        return typeof output === 'string' ? JSON.parse(output) as unknown : output;
+        const rawOutput = await tool.execute(input);
+
+        if (typeof rawOutput !== 'string') {
+          throw new Error(`adapter fake 的 Tool ${toolName} 未回傳 JSON string`);
+        }
+
+        return rawOutput;
       },
       async navigate(url) {
         navigations.push(url);

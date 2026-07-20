@@ -2,7 +2,7 @@ export interface Day25JourneyTestDoubleClient {
   readonly executeTool: (
     toolName: string,
     input: Record<string, unknown>
-  ) => Promise<unknown>;
+  ) => Promise<string>;
   readonly navigate: (url: string) => Promise<string>;
   readonly readAvailableTools: () => Promise<readonly string[]>;
   readonly readUiEvidence: () => Promise<readonly string[]>;
@@ -13,6 +13,7 @@ export type Day25JourneyTestDoubleStep =
       readonly action: 'invoke';
       readonly toolName: string;
       readonly input: Record<string, unknown>;
+      readonly rawOutput: string;
       readonly output: unknown;
       readonly availableTools: readonly string[];
       readonly uiEvidence: readonly string[];
@@ -33,6 +34,11 @@ export interface Day25JourneyTestDoubleResult {
   readonly detailUrl?: string;
   readonly saveResult?: unknown;
   readonly steps: readonly Day25JourneyTestDoubleStep[];
+}
+
+export interface Day25JourneyTestDoubleAttachment {
+  readonly evidenceBoundary: string;
+  readonly result: Day25JourneyTestDoubleResult;
 }
 
 /**
@@ -112,9 +118,10 @@ async function invokeAndRecord(
   toolName: string,
   input: Record<string, unknown>
 ): Promise<unknown> {
-  const output = await client.executeTool(toolName, input);
+  const rawOutput = await client.executeTool(toolName, input);
+  const output = JSON.parse(rawOutput) as unknown;
   const evidence = await observe(client);
-  steps.push({ action: 'invoke', toolName, input, output, ...evidence });
+  steps.push({ action: 'invoke', toolName, input, rawOutput, output, ...evidence });
   return output;
 }
 
