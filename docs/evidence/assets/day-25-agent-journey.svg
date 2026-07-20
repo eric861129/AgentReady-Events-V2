@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Day 25 Agent journey test-double flow</title>
+  <desc id="desc">可重複的 test-double 流程：搜尋、使用第一筆 eventId 與 detailUrl、導覽、取得詳情、收藏；空結果或任何 errorCode 都停止。</desc>
+  <rect width="1200" height="720" fill="#f8fafc"/>
+  <text x="60" y="62" font-family="Arial, 'Noto Sans TC', sans-serif" font-size="30" font-weight="700" fill="#0f172a">Day 25｜固定且可停止的 journey</text>
+  <text x="60" y="96" font-family="Arial, 'Noto Sans TC', sans-serif" font-size="18" fill="#b42318">adapter fake / browser test double｜不是原生 Chrome Inspector 或真實 Agent discovery</text>
+
+  <g font-family="Arial, 'Noto Sans TC', sans-serif">
+    <rect x="60" y="145" width="210" height="116" rx="14" fill="#e0f2fe" stroke="#0369a1" stroke-width="2"/>
+    <text x="82" y="181" font-size="19" font-weight="700" fill="#0c4a6e">1. search_events</text>
+    <text x="82" y="213" font-size="16" fill="#0f172a">{ query: "前端" }</text>
+    <text x="82" y="239" font-size="15" fill="#334155">讀第一筆結果</text>
+
+    <path d="M270 203 H335" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <rect x="335" y="145" width="240" height="116" rx="14" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+    <text x="357" y="181" font-size="19" font-weight="700" fill="#78350f">2. 原樣使用結果</text>
+    <text x="357" y="213" font-size="15" fill="#0f172a">eventId + detailUrl</text>
+    <text x="357" y="239" font-size="15" fill="#334155">不猜 ID、不改 URL</text>
+
+    <path d="M575 203 H640" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <rect x="640" y="145" width="210" height="116" rx="14" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+    <text x="662" y="181" font-size="19" font-weight="700" fill="#4c1d95">3. browser 導覽</text>
+    <text x="662" y="213" font-size="15" fill="#0f172a">?event=event-</text>
+    <text x="662" y="237" font-size="15" fill="#0f172a">frontend-summit</text>
+
+    <path d="M850 203 H915" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <rect x="915" y="145" width="225" height="116" rx="14" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+    <text x="937" y="181" font-size="18" font-weight="700" fill="#14532d">4. get details → save</text>
+    <text x="937" y="213" font-size="15" fill="#0f172a">saved: true</text>
+    <text x="937" y="237" font-size="15" fill="#0f172a">changed: true</text>
+
+    <path d="M165 261 V350" stroke="#b42318" stroke-width="3" marker-end="url(#stopArrow)"/>
+    <rect x="60" y="350" width="360" height="126" rx="14" fill="#fee2e2" stroke="#b42318" stroke-width="2"/>
+    <text x="82" y="386" font-size="19" font-weight="700" fill="#7f1d1d">STOP A｜空結果或搜尋 errorCode</text>
+    <text x="82" y="418" font-size="15" fill="#0f172a">不導覽、不呼叫下一個 Tool</text>
+    <text x="82" y="446" font-size="15" fill="#0f172a">NO_RESULTS 也不猜 eventId</text>
+
+    <path d="M745 261 V350" stroke="#b42318" stroke-width="3" marker-end="url(#stopArrow)"/>
+    <rect x="510" y="350" width="630" height="126" rx="14" fill="#fee2e2" stroke="#b42318" stroke-width="2"/>
+    <text x="532" y="386" font-size="19" font-weight="700" fill="#7f1d1d">STOP B｜details / save 回任何 errorCode</text>
+    <text x="532" y="418" font-size="15" fill="#0f172a">ROUTE_MISMATCH：保留原 eventId 與 URL，不 recovery</text>
+    <text x="532" y="446" font-size="15" fill="#0f172a">不呼叫 save_event；收藏 PUT request = 0</text>
+
+    <rect x="60" y="535" width="1080" height="118" rx="14" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+    <text x="82" y="574" font-size="18" font-weight="700" fill="#0f172a">可重複證據</text>
+    <text x="82" y="607" font-size="16" fill="#334155">integration：正式 Tool definitions + adapter fake + test-double runner</text>
+    <text x="82" y="634" font-size="16" fill="#334155">browser：Playwright + document.modelContext browser test double + URL / dialog / 收藏狀態 UI assertions</text>
+  </g>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#475569"/>
+    </marker>
+    <marker id="stopArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#b42318"/>
+    </marker>
+  </defs>
+</svg>
