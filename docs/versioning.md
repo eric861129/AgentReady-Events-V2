@@ -11,7 +11,7 @@
 ```powershell
 git clone --single-branch --branch v0.1.0-day-14 <repository-url>
 Set-Location AgentReady-Events-V2
-npm install
+npm ci
 ```
 
 讀者也可以在已 Clone 的專案中切換：
@@ -44,6 +44,13 @@ Day 19 的發布快照以前述 Day 18 tag 為唯一前置版本；Day 20–26 �
 Day 1–18 的 SHA 僅作歷史紀錄與追溯用途；本階段不修改任何既有 ref。Day 18 的實際基線與 ancestor 證據見 [Day 19–26 基線紀錄](evidence/day-19-to-day-26-baseline.md)。
 
 Day 21 曾因審查發現的缺陷進行一次經授權的快照修訂；Day 22 已進行兩次經授權的快照修訂；Day23 依 reviewer 的 caller-result contract 修正進行一次受控修訂。每次原 reader branch/tag 對應的 commit 都以獨立 archive branch 與 annotated archive tag 保存；修訂目的、邊界與 fresh clone 驗收規則見 [Day 21 快照修訂紀錄](evidence/day-21-snapshot-revision.md)、[Day 22 快照修訂紀錄](evidence/day-22-snapshot-revision.md) 與 [Day 23 快照修訂紀錄](evidence/day-23-snapshot-revision.md)。此例外不授權修改 Day 1–22 的既有 ref；Day20 新增 canonical branch 也不移動既有 tag 或 compatibility alias。
+
+Day 19–26 的 reader clone、五項 gate、失敗處理與完整 SHA 見
+[reader snapshot smoke 紀錄](evidence/reader-snapshot-smoke-day-19-to-day-26.md)；
+各日 HTTP、browser test double、真實 Demo API 與原生 Chrome 證據邊界見
+[runtime matrix](evidence/runtime-matrix-day-19-to-day-26.md)。這兩份文件固定以 tag
+作為文章主要 ref，branch 只提供 convenience clone；branch 與 tag 必須解析到同一個
+commit。
 
 ## Day 20 canonical convenience branch
 
@@ -82,9 +89,9 @@ git clone --single-branch --branch day-20-human-in-the-loop <repository-url>
 | 21 | `day-21-save-event` | `v0.1.0-day-21` | 已修訂並封存原快照 |
 | 22 | `day-22-visible-tool-state` | `v0.1.0-day-22` | 已第二次修訂並封存前快照 |
 | 23 | `day-23-shared-use-case` | `v0.1.0-day-23` | 已受控修訂；pre-review snapshot 已封存 |
-| 24 | `day-24-tool-lifecycle` | `v0.1.0-day-24` | 待建立 |
-| 25 | `day-25-agent-journey` | `v0.1.0-day-25` | 待建立 |
-| 26 | `day-26-server-authorization` | `v0.1.0-day-26` | 待建立 |
+| 24 | `day-24-tool-lifecycle` | `v0.1.0-day-24` | 已發布；`eb023c5` |
+| 25 | `day-25-agent-journey` | `v0.1.0-day-25` | 已發布；`e8a0590` |
+| 26 | `day-26-server-authorization` | `v0.1.0-day-26` | 已發布；`fb07f4a` |
 | 27 | `day-27-tool-tests` | `v0.1.0-day-27` | 待建立 |
 | 28 | `day-28-ui-change-comparison` | `v0.1.0-day-28` | 待建立 |
 | 29 | `day-29-agent-ready-evidence` | `v0.1.0-day-29` | 待建立 |
