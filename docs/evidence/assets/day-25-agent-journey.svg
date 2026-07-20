@@ -44,10 +44,11 @@
     <text x="532" y="418" font-size="15" fill="#0f172a">ROUTE_MISMATCH：保留原 eventId 與 URL，不 recovery</text>
     <text x="532" y="446" font-size="15" fill="#0f172a">不呼叫 save_event；收藏 PUT request = 0</text>
 
-    <rect x="60" y="535" width="1080" height="118" rx="14" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+    <rect x="60" y="535" width="1080" height="145" rx="14" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
     <text x="82" y="574" font-size="18" font-weight="700" fill="#0f172a">可重複證據</text>
     <text x="82" y="607" font-size="16" fill="#334155">integration：正式 Tool definitions + adapter fake + test-double runner</text>
     <text x="82" y="634" font-size="16" fill="#334155">browser：Playwright + document.modelContext browser test double + URL / dialog / 收藏狀態 UI assertions</text>
+    <text x="82" y="661" font-size="16" fill="#334155">每個 step：input + output + availableTools + 文字型 uiEvidence</text>
   </g>
 
   <defs>

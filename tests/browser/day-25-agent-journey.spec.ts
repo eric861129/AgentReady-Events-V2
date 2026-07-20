@@ -67,16 +67,80 @@ test('Day 25 browser test double：完整 journey 保存 Tool input/output、det
     'get_event_details',
     'save_event'
   ]);
+  expect(result.steps).toEqual([
+    expect.objectContaining({
+      action: 'invoke',
+      toolName: 'search_events',
+      availableTools: ['search_events'],
+      uiEvidence: expect.arrayContaining([
+        '搜尋結果：前端體驗設計小聚',
+        `detailUrl：${expectedDetailUrl}`
+      ])
+    }),
+    expect.objectContaining({
+      action: 'navigate',
+      availableTools: ['get_event_details', 'save_event'],
+      uiEvidence: expect.arrayContaining([
+        '活動詳情：前端體驗設計小聚',
+        '收藏狀態：尚未收藏'
+      ])
+    }),
+    expect.objectContaining({
+      action: 'invoke',
+      toolName: 'get_event_details',
+      availableTools: ['get_event_details', 'save_event'],
+      uiEvidence: expect.arrayContaining(['活動詳情：前端體驗設計小聚'])
+    }),
+    expect.objectContaining({
+      action: 'invoke',
+      toolName: 'save_event',
+      availableTools: ['get_event_details', 'save_event'],
+      uiEvidence: expect.arrayContaining(['收藏狀態：已收藏'])
+    })
+  ]);
+
+  const attachmentBody = Buffer.from(JSON.stringify({
+    evidenceBoundary: 'Playwright browser test double；不是原生 Chrome Inspector 或真實 Agent discovery',
+    result
+  }, null, 2), 'utf8');
+  const attachmentEvidence = JSON.parse(attachmentBody.toString('utf8')) as {
+    readonly result: { readonly steps: readonly Record<string, unknown>[] };
+  };
+  expect(attachmentEvidence.result.steps).toHaveLength(4);
+  expect(attachmentEvidence.result.steps.every((step) => (
+    Array.isArray(step.availableTools)
+    && Array.isArray(step.uiEvidence)
+    && 'input' in step
+    && 'output' in step
+  ))).toBe(true);
+  expect(attachmentEvidence.result.steps).toEqual([
+    expect.objectContaining({
+      action: 'invoke',
+      toolName: 'search_events',
+      availableTools: ['search_events'],
+      uiEvidence: expect.arrayContaining(['搜尋結果：前端體驗設計小聚'])
+    }),
+    expect.objectContaining({
+      action: 'navigate',
+      availableTools: ['get_event_details', 'save_event'],
+      uiEvidence: expect.arrayContaining(['收藏狀態：尚未收藏'])
+    }),
+    expect.objectContaining({
+      action: 'invoke',
+      toolName: 'get_event_details',
+      availableTools: ['get_event_details', 'save_event'],
+      uiEvidence: expect.arrayContaining(['活動詳情：前端體驗設計小聚'])
+    }),
+    expect.objectContaining({
+      action: 'invoke',
+      toolName: 'save_event',
+      availableTools: ['get_event_details', 'save_event'],
+      uiEvidence: expect.arrayContaining(['收藏狀態：已收藏'])
+    })
+  ]);
 
   await testInfo.attach('day-25-agent-journey-browser-test-double.json', {
-    body: Buffer.from(JSON.stringify({
-      evidenceBoundary: 'Playwright browser test double；不是原生 Chrome Inspector 或真實 Agent discovery',
-      finalUi: {
-        detailTitle: '前端體驗設計小聚',
-        savedState: '收藏狀態：已收藏'
-      },
-      result
-    }, null, 2), 'utf8'),
+    body: attachmentBody,
     contentType: 'application/json'
   });
 });
@@ -161,8 +225,36 @@ function createBrowserTestDoubleClient(page: Page): Day25JourneyTestDoubleClient
         'get_event_details',
         'save_event'
       ]);
-    }
+      return page.url();
+    },
+    readAvailableTools: () => readRegisteredToolNames(page),
+    readUiEvidence: () => readBrowserUiEvidence(page)
   };
+}
+
+async function readBrowserUiEvidence(page: Page): Promise<readonly string[]> {
+  const dialog = page.getByRole('dialog');
+
+  if (await dialog.count() > 0) {
+    const title = await dialog.getByRole('heading').innerText();
+    const savedState = await page.getByTestId('event-detail-saved-state')
+      .locator('strong')
+      .innerText();
+
+    return [
+      `活動詳情：${title}`,
+      `收藏狀態：${savedState}`
+    ];
+  }
+
+  const eventCard = page.locator(`[data-event-id="${canonicalEventId}"]`);
+  const title = await eventCard.getByRole('heading').innerText();
+  const detailUrl = await eventCard.getByRole('link', { name: '查看詳情' }).getAttribute('href');
+
+  return [
+    `搜尋結果：${title}`,
+    `detailUrl：${detailUrl ?? 'missing'}`
+  ];
 }
 
 async function installBrowserTestDouble(page: Page): Promise<void> {

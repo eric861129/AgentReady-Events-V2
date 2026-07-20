@@ -43,19 +43,40 @@ describe('Day 25 Agent journey adapter fake test-double', () => {
     ]);
     expect(harness.navigations).toEqual([`${origin}?event=${canonicalEventId}`]);
     expect(harness.saveEvent).toHaveBeenCalledExactlyOnceWith(canonicalEventId);
-    expect(result.steps).toEqual(expect.arrayContaining([
+    expect(result.steps).toEqual([
       expect.objectContaining({
         action: 'invoke',
         toolName: 'search_events',
-        input: { query: '前端' }
+        input: { query: '前端' },
+        availableTools: ['search_events'],
+        uiEvidence: expect.arrayContaining([
+          '搜尋結果：前端體驗設計小聚',
+          `detailUrl：${origin}?event=${canonicalEventId}`
+        ])
       }),
       expect.objectContaining({
         action: 'navigate',
-        url: `${origin}?event=${canonicalEventId}`
+        input: { url: `${origin}?event=${canonicalEventId}` },
+        output: { currentUrl: `${origin}?event=${canonicalEventId}` },
+        availableTools: ['get_event_details', 'save_event'],
+        uiEvidence: expect.arrayContaining([
+          '活動詳情：前端體驗設計小聚',
+          '收藏狀態：尚未收藏'
+        ])
       }),
-      expect.objectContaining({ action: 'invoke', toolName: 'get_event_details' }),
-      expect.objectContaining({ action: 'invoke', toolName: 'save_event' })
-    ]));
+      expect.objectContaining({
+        action: 'invoke',
+        toolName: 'get_event_details',
+        availableTools: ['get_event_details', 'save_event'],
+        uiEvidence: expect.arrayContaining(['活動詳情：前端體驗設計小聚'])
+      }),
+      expect.objectContaining({
+        action: 'invoke',
+        toolName: 'save_event',
+        availableTools: ['get_event_details', 'save_event'],
+        uiEvidence: expect.arrayContaining(['收藏狀態：已收藏'])
+      })
+    ]);
   });
 
   it('搜尋結果陣列為空時立即停止且不導覽、不呼叫詳情或收藏', async () => {
@@ -113,6 +134,53 @@ describe('Day 25 Agent journey adapter fake test-double', () => {
     ]);
     expect(harness.getEventDetails).not.toHaveBeenCalled();
     expect(harness.saveEvent).not.toHaveBeenCalled();
+  });
+
+  it('save_event 回 changed false 時停止而不標示 journey completed', async () => {
+    const harness = await createJourneyHarness();
+    const client: Day25JourneyTestDoubleClient = {
+      ...harness.client,
+      async executeTool(toolName, input) {
+        const output = await harness.client.executeTool(toolName, input);
+
+        return toolName === 'save_event' ? {
+          status: 'ok',
+          eventId: canonicalEventId,
+          saved: true,
+          changed: false
+        } : output;
+      }
+    };
+
+    const result = await runDay25AgentJourneyTestDouble(client, { query: '前端' });
+
+    expect(result).toMatchObject({
+      status: 'stopped',
+      stopReason: 'SAVE_NOT_CHANGED'
+    });
+  });
+
+  it('save_event 回 malformed success 時停止而不標示 journey completed', async () => {
+    const harness = await createJourneyHarness();
+    const client: Day25JourneyTestDoubleClient = {
+      ...harness.client,
+      async executeTool(toolName, input) {
+        const output = await harness.client.executeTool(toolName, input);
+
+        return toolName === 'save_event' ? {
+          status: 'ok',
+          eventId: canonicalEventId,
+          saved: true
+        } : output;
+      }
+    };
+
+    const result = await runDay25AgentJourneyTestDouble(client, { query: '前端' });
+
+    expect(result).toMatchObject({
+      status: 'stopped',
+      stopReason: 'INVALID_SAVE_RESULT_CONTRACT'
+    });
   });
 });
 
@@ -189,6 +257,35 @@ async function createJourneyHarness(overrides: {
         route = readEventRoute(new URL(url).search);
         lifecycle.invalidate();
         await lifecycle.sync(route);
+        return currentUrl;
+      },
+      async readAvailableTools() {
+        return activeTools.map((tool) => tool.name);
+      },
+      async readUiEvidence() {
+        if (route.kind === 'search') {
+          return [
+            '搜尋結果：前端體驗設計小聚',
+            `detailUrl：${origin}?event=${canonicalEventId}`
+          ];
+        }
+
+        const routeEvent = route.kind === 'detail' ? findEventById(route.eventId) : undefined;
+
+        if (routeEvent === undefined) {
+          return [`找不到活動：${route.eventId}`];
+        }
+
+        const saveResult = saveEvent.mock.results.at(-1)?.value === undefined
+          ? null
+          : await saveEvent.mock.results.at(-1)?.value;
+
+        return [
+          `活動詳情：${routeEvent.title}`,
+          saveResult !== null && isCompletedSaveResult(saveResult)
+            ? '收藏狀態：已收藏'
+            : '收藏狀態：尚未收藏'
+        ];
       }
     }
   };
@@ -201,4 +298,15 @@ function createStaticTool(name: string, output: unknown): WebMcpToolDefinition {
     inputSchema: { type: 'object' },
     execute: () => JSON.stringify(output)
   };
+}
+
+function isCompletedSaveResult(value: unknown): boolean {
+  return typeof value === 'object'
+    && value !== null
+    && 'status' in value
+    && value.status === 'ok'
+    && 'saved' in value
+    && value.saved === true
+    && 'changed' in value
+    && value.changed === true;
 }

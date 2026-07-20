@@ -21,12 +21,12 @@
 下表的 input/output 由 `tests/integration/day-25-agent-journey.test.ts` 與
 `tests/browser/day-25-agent-journey.spec.ts` 鎖定。兩者都明示為 test double。
 
-| 步驟 | 可用 Tool / 動作 | input | output / UI evidence |
-| --- | --- | --- | --- |
-| 1 | `search_events` | `{ "query": "前端" }` | `status: "ok"`；`results[0]` 如下 |
-| 2 | browser test-double 導覽 | 第一筆 `detailUrl` | URL 成為 `/?event=event-frontend-summit`；活動詳情 dialog 顯示「前端體驗設計小聚」 |
-| 3 | `get_event_details` | `{ "eventId": "event-frontend-summit" }` | `status: "ok"` 且回傳同一 canonical event |
-| 4 | `save_event` | `{ "eventId": "event-frontend-summit" }` | `{ "status": "ok", "eventId": "event-frontend-summit", "saved": true, "changed": true }`；UI 顯示「收藏狀態：已收藏」 |
+| 步驟 | input | output | 執行後 `availableTools` | 文字型 `uiEvidence` |
+| --- | --- | --- | --- | --- |
+| 1. `search_events` | `{ "query": "前端" }` | `status: "ok"`；`results[0]` 如下 | `search_events` | `搜尋結果：前端體驗設計小聚`、完整 `detailUrl` |
+| 2. browser test-double 導覽 | `{ "url": "http://127.0.0.1:4173/?event=event-frontend-summit" }` | `{ "currentUrl": "http://127.0.0.1:4173/?event=event-frontend-summit" }` | `get_event_details`、`save_event` | `活動詳情：前端體驗設計小聚`、`收藏狀態：尚未收藏` |
+| 3. `get_event_details` | `{ "eventId": "event-frontend-summit" }` | `status: "ok"` 且回傳同一 canonical event | `get_event_details`、`save_event` | `活動詳情：前端體驗設計小聚`、`收藏狀態：尚未收藏` |
+| 4. `save_event` | `{ "eventId": "event-frontend-summit" }` | `{ "status": "ok", "eventId": "event-frontend-summit", "saved": true, "changed": true }` | `get_event_details`、`save_event` | `活動詳情：前端體驗設計小聚`、`收藏狀態：已收藏` |
 
 搜尋第一筆完整資料：
 
@@ -60,8 +60,10 @@
 
 Playwright attachment 固定命名為
 `day-25-agent-journey-browser-test-double.json`，內容包含每一步 input/output、
-導覽 URL 與最終 UI 文字。這個 attachment 是 browser test-double 產物，不是原生
-Agent 截圖。
+執行後 Tool inventory、導覽 URL 與當下 UI 文字。browser test 會重新 parse 即將附加
+的同一份 JSON bytes，確認四個 step 都有 `input`、`output`、`availableTools`、
+`uiEvidence`，並逐階段比對搜尋結果、詳情 dialog 與收藏後 state。這個 attachment 是
+browser test-double 的結構化 raw test evidence，不是原生 Agent 或文章用最終截圖。
 
 ## 停止條件與無副作用證據
 
@@ -70,6 +72,8 @@ Agent 截圖。
 | test-double 搜尋回 `results: []` | `search_events` | `EMPTY_RESULTS` | 不導覽、不讀詳情、不收藏 |
 | 正式搜尋回一般錯誤 | `search_events` | `NO_RESULTS` | 不猜 event ID、不導覽、不呼叫下一個 Tool |
 | test-double 故障注入：第一筆 `eventId` 為 `event-api-contract`，`detailUrl` route 仍為 `event-frontend-summit` | `search_events` → 原樣導覽 → `get_event_details` | `ROUTE_MISMATCH` | 不改 ID、不改 URL、不呼叫 `save_event`；`PUT /api/saved-events/:eventId` 為 0 次 |
+| `save_event` 回 `{ status: "ok", saved: true, changed: false }` | 完整呼叫至 `save_event` | `SAVE_NOT_CHANGED` | 不得標示 completed |
+| `save_event` 回缺少 `changed` 等 malformed success | 完整呼叫至 `save_event` | `INVALID_SAVE_RESULT_CONTRACT` | 不得標示 completed |
 
 故障注入只存在 test-double 測試，用來證明停止規則；正式 catalog 沒有 alias，也沒有
 被改寫。runner 對任何字串 `errorCode` 使用同一停止分支，`ROUTE_MISMATCH` 不會觸發
@@ -98,11 +102,11 @@ npm run typecheck
 npm run build
 ```
 
-2026-07-20 提交前 fresh gate：
+2026-07-20 review correction 後 fresh gate：
 
-- 聚焦 integration：1 test file、4 passed。
+- 聚焦 integration：1 test file、6 passed。
 - 聚焦 Day 25 browser：3 passed。
-- `npm test`：18 test files、80 passed。
+- `npm test`：18 test files、82 passed。
 - `npm run test:browser`：18 passed。
 - `npm run typecheck`：passed。
 - `npm run build`：typecheck 與 Vite production build passed；19 modules transformed。

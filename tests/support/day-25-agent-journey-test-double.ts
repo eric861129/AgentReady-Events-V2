@@ -3,7 +3,9 @@ export interface Day25JourneyTestDoubleClient {
     toolName: string,
     input: Record<string, unknown>
   ) => Promise<unknown>;
-  readonly navigate: (url: string) => Promise<void>;
+  readonly navigate: (url: string) => Promise<string>;
+  readonly readAvailableTools: () => Promise<readonly string[]>;
+  readonly readUiEvidence: () => Promise<readonly string[]>;
 }
 
 export type Day25JourneyTestDoubleStep =
@@ -12,10 +14,16 @@ export type Day25JourneyTestDoubleStep =
       readonly toolName: string;
       readonly input: Record<string, unknown>;
       readonly output: unknown;
+      readonly availableTools: readonly string[];
+      readonly uiEvidence: readonly string[];
     }
   | {
       readonly action: 'navigate';
       readonly url: string;
+      readonly input: { readonly url: string };
+      readonly output: { readonly currentUrl: string };
+      readonly availableTools: readonly string[];
+      readonly uiEvidence: readonly string[];
     };
 
 export interface Day25JourneyTestDoubleResult {
@@ -54,8 +62,15 @@ export async function runDay25AgentJourneyTestDouble(
   }
 
   const { eventId, detailUrl } = firstResult;
-  await client.navigate(detailUrl);
-  steps.push({ action: 'navigate', url: detailUrl });
+  const currentUrl = await client.navigate(detailUrl);
+  const navigationEvidence = await observe(client);
+  steps.push({
+    action: 'navigate',
+    url: detailUrl,
+    input: { url: detailUrl },
+    output: { currentUrl },
+    ...navigationEvidence
+  });
 
   const detailsResult = await invokeAndRecord(
     client,
@@ -76,6 +91,12 @@ export async function runDay25AgentJourneyTestDouble(
     return stopped(steps, saveErrorCode, eventId, detailUrl);
   }
 
+  const invalidSaveReason = readInvalidSaveReason(saveResult);
+
+  if (invalidSaveReason !== undefined) {
+    return stopped(steps, invalidSaveReason, eventId, detailUrl);
+  }
+
   return {
     status: 'completed',
     eventId,
@@ -92,8 +113,24 @@ async function invokeAndRecord(
   input: Record<string, unknown>
 ): Promise<unknown> {
   const output = await client.executeTool(toolName, input);
-  steps.push({ action: 'invoke', toolName, input, output });
+  const evidence = await observe(client);
+  steps.push({ action: 'invoke', toolName, input, output, ...evidence });
   return output;
+}
+
+async function observe(client: Day25JourneyTestDoubleClient): Promise<{
+  readonly availableTools: readonly string[];
+  readonly uiEvidence: readonly string[];
+}> {
+  const [availableTools, uiEvidence] = await Promise.all([
+    client.readAvailableTools(),
+    client.readUiEvidence()
+  ]);
+
+  return {
+    availableTools: [...availableTools],
+    uiEvidence: [...uiEvidence]
+  };
 }
 
 function readErrorCode(value: unknown): string | undefined {
@@ -102,6 +139,28 @@ function readErrorCode(value: unknown): string | undefined {
   }
 
   return typeof value.errorCode === 'string' ? value.errorCode : undefined;
+}
+
+function readInvalidSaveReason(value: unknown): string | undefined {
+  if (
+    isRecord(value)
+    && value.status === 'ok'
+    && value.saved === true
+    && value.changed === true
+  ) {
+    return undefined;
+  }
+
+  if (
+    isRecord(value)
+    && value.status === 'ok'
+    && value.saved === true
+    && value.changed === false
+  ) {
+    return 'SAVE_NOT_CHANGED';
+  }
+
+  return 'INVALID_SAVE_RESULT_CONTRACT';
 }
 
 function readFirstSearchResult(value: unknown): {
