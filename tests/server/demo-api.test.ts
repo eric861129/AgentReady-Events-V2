@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevApiServer } from '../../server/http/dev-api-server';
 
 const knownEventId = 'event-frontend-summit';
+const anotherKnownEventId = 'event-api-contract';
 
 describe('Demo API', () => {
   const server = createDevApiServer();
@@ -27,11 +28,17 @@ describe('Demo API', () => {
     });
   });
 
-  it('沒有 demo session 時拒絕收藏活動', async () => {
-    const response = await putSavedEventWithoutCookie(knownEventId);
+  it.each([
+    { label: '沒有 cookie', cookie: undefined },
+    { label: '無效 session cookie', cookie: 'demo_session=invalid-session-token' }
+  ])('$label 時拒絕收藏活動，且 session principal 的資料不變', async ({ cookie }) => {
+    const validCookie = await createDemoSession();
+    const before = await listSavedEvents(validCookie);
+    const response = await putSavedEventResponse(cookie, anotherKnownEventId);
 
     expect(response.status).toBe(401);
     expect(await errorCodeOf(response)).toBe('UNAUTHENTICATED');
+    expect(await listSavedEvents(validCookie)).toEqual(before);
   });
 
   it('建立 HttpOnly 同源 session，且 token 不能由 client 指定', async () => {
@@ -70,22 +77,58 @@ describe('Demo API', () => {
     expect(await putSavedEvent(cookie, knownEventId)).toMatchObject({ changed: false });
   });
 
-  it('未知活動回傳 EVENT_NOT_FOUND', async () => {
+  it('client 只能用有效 session 讀取由該 principal 決定的收藏集合', async () => {
     const cookie = await createDemoSession();
+    await putSavedEvent(cookie, knownEventId);
+    const authenticated = await listSavedEventsResponse(cookie);
 
-    expect(await putSavedEvent(cookie, 'no-such-event')).toMatchObject({
-      status: 'error',
-      errorCode: 'EVENT_NOT_FOUND'
+    expect(authenticated.status).toBe(200);
+    expect(await authenticated.json()).toMatchObject({
+      status: 'ok',
+      eventIds: expect.arrayContaining([knownEventId])
+    });
+
+    for (const rejectedCookie of [undefined, 'demo_session=invalid-session-token']) {
+      const rejected = await listSavedEventsResponse(rejectedCookie);
+
+      expect(rejected.status).toBe(401);
+      expect(await errorCodeOf(rejected)).toBe('UNAUTHENTICATED');
+    }
+
+    expect(await listSavedEvents(cookie)).toMatchObject({
+      status: 'ok',
+      eventIds: expect.arrayContaining([knownEventId])
     });
   });
 
-  it('拒絕 body 夾帶 userId', async () => {
+  it('合法 session 收藏未知活動時回傳 404 EVENT_NOT_FOUND，且資料不變', async () => {
     const cookie = await createDemoSession();
+    const before = await listSavedEvents(cookie);
+    const response = await putSavedEventResponse(cookie, 'no-such-event');
 
-    expect(await putSavedEvent(cookie, knownEventId, { userId: 'admin' })).toMatchObject({
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({
+      status: 'error',
+      errorCode: 'EVENT_NOT_FOUND'
+    });
+    expect(await listSavedEvents(cookie)).toEqual(before);
+  });
+
+  it('拒絕 body 夾帶 userId，回傳 400 UNEXPECTED_IDENTITY_FIELD 且資料不變', async () => {
+    const cookie = await createDemoSession();
+    const before = await listSavedEvents(cookie);
+    const response = await putSavedEventResponse(
+      cookie,
+      anotherKnownEventId,
+      { userId: 'another-user' }
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
       status: 'error',
       errorCode: 'UNEXPECTED_IDENTITY_FIELD'
     });
+    expect(await listSavedEvents(cookie)).toEqual(before);
   });
 
   it('不把 query string 或自訂 header 當成 session 身分', async () => {
@@ -132,31 +175,43 @@ describe('Demo API', () => {
     return cookie!.split(';', 1)[0];
   }
 
-  async function putSavedEventWithoutCookie(eventId: string): Promise<Response> {
-    return fetch(`${baseUrl}/api/saved-events/${eventId}`, { method: 'PUT' });
-  }
-
   async function putSavedEvent(
     cookie: string,
     eventId: string,
     body?: Record<string, unknown>
   ): Promise<Record<string, unknown>> {
+    const response = await putSavedEventResponse(cookie, eventId, body);
+
+    return response.json() as Promise<Record<string, unknown>>;
+  }
+
+  async function putSavedEventResponse(
+    cookie: string | undefined,
+    eventId: string,
+    body?: Record<string, unknown>
+  ): Promise<Response> {
     const response = await fetch(`${baseUrl}/api/saved-events/${eventId}`, {
       method: 'PUT',
       headers: {
-        cookie,
+        ...(cookie === undefined ? {} : { cookie }),
         ...(body === undefined ? {} : { 'content-type': 'application/json' })
       },
       body: body === undefined ? undefined : JSON.stringify(body)
     });
 
-    return response.json() as Promise<Record<string, unknown>>;
+    return response;
   }
 
   async function listSavedEvents(cookie: string): Promise<Record<string, unknown>> {
-    const response = await fetch(`${baseUrl}/api/saved-events`, { headers: { cookie } });
+    const response = await listSavedEventsResponse(cookie);
 
     return response.json() as Promise<Record<string, unknown>>;
+  }
+
+  async function listSavedEventsResponse(cookie: string | undefined): Promise<Response> {
+    return fetch(`${baseUrl}/api/saved-events`, {
+      headers: cookie === undefined ? {} : { cookie }
+    });
   }
 
   async function removeSavedEvent(

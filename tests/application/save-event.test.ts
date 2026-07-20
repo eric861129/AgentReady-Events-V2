@@ -1,12 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createSaveEventUseCase } from '../../src/application/save-event';
-import type { ApiError, SavedEventsApi, SaveEventSuccess } from '../../src/client/saved-events-api';
+import {
+  createSavedEventsApi,
+  type ApiError,
+  type SavedEventsApi,
+  type SaveEventSuccess
+} from '../../src/client/saved-events-api';
 
 const knownEventId = 'event-frontend-summit';
 
 describe('createSaveEventUseCase', () => {
   it('eventId 與目前顯示詳情不符時先回 ROUTE_MISMATCH，完全不發 HTTP', async () => {
-    const api = createApi();
+    const fetchSpy = vi.fn(async (): Promise<Response> => new Response());
+    const api = createSavedEventsApi(fetchSpy);
     const useCase = createSaveEventUseCase({
       api,
       getCurrentRoute: () => ({ eventId: knownEventId })
@@ -16,7 +22,7 @@ describe('createSaveEventUseCase', () => {
       status: 'error',
       errorCode: 'ROUTE_MISMATCH'
     });
-    expect(api.saveEvent).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it.each([
