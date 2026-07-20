@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   runDay25AgentJourneyTestDouble,
+  type Day25JourneyTestDoubleAttachment,
   type Day25JourneyTestDoubleClient
 } from '../support/day-25-agent-journey-test-double';
 
@@ -99,13 +100,14 @@ test('Day 25 browser test double：完整 journey 保存 Tool input/output、det
     })
   ]);
 
-  const attachmentBody = Buffer.from(JSON.stringify({
+  const attachment: Day25JourneyTestDoubleAttachment = {
     evidenceBoundary: 'Playwright browser test double；不是原生 Chrome Inspector 或真實 Agent discovery',
     result
-  }, null, 2), 'utf8');
-  const attachmentEvidence = JSON.parse(attachmentBody.toString('utf8')) as {
-    readonly result: { readonly steps: readonly Record<string, unknown>[] };
   };
+  const attachmentBody = Buffer.from(JSON.stringify(attachment, null, 2), 'utf8');
+  const attachmentEvidence = JSON.parse(
+    attachmentBody.toString('utf8')
+  ) as Day25JourneyTestDoubleAttachment;
   expect(attachmentEvidence.result.steps).toHaveLength(4);
   expect(attachmentEvidence.result.steps.every((step) => (
     Array.isArray(step.availableTools)
@@ -113,6 +115,16 @@ test('Day 25 browser test double：完整 journey 保存 Tool input/output、det
     && 'input' in step
     && 'output' in step
   ))).toBe(true);
+  const invocationSteps = attachmentEvidence.result.steps.filter((step) => (
+    step.action === 'invoke'
+  ));
+  expect(invocationSteps).toHaveLength(3);
+
+  for (const step of invocationSteps) {
+    expect(typeof step.rawOutput).toBe('string');
+
+    expect(JSON.parse(step.rawOutput) as unknown).toEqual(step.output);
+  }
   expect(attachmentEvidence.result.steps).toEqual([
     expect.objectContaining({
       action: 'invoke',
@@ -151,8 +163,10 @@ test('Day 25 browser test double：空搜尋結果不導覽也不呼叫下一個
   const client: Day25JourneyTestDoubleClient = {
     ...realClient,
     async executeTool(toolName, input) {
-      const result = await realClient.executeTool(toolName, input);
-      return toolName === 'search_events' ? { status: 'ok', results: [] } : result;
+      const rawOutput = await realClient.executeTool(toolName, input);
+      return toolName === 'search_events'
+        ? JSON.stringify({ status: 'ok', results: [] })
+        : rawOutput;
     }
   };
 
@@ -178,23 +192,24 @@ test('Day 25 browser test double：eventId 與 route mismatch 時停止且沒有
   const client: Day25JourneyTestDoubleClient = {
     ...realClient,
     async executeTool(toolName, input) {
-      const result = await realClient.executeTool(toolName, input);
+      const rawOutput = await realClient.executeTool(toolName, input);
+      const result = JSON.parse(rawOutput) as unknown;
 
       if (toolName !== 'search_events' || !isRecord(result)) {
-        return result;
+        return rawOutput;
       }
 
       const firstResult = Array.isArray(result.results) && isRecord(result.results[0])
         ? result.results[0]
         : {};
 
-      return {
+      return JSON.stringify({
         ...result,
         results: [{
           ...firstResult,
           eventId: 'event-api-contract'
         }]
-      };
+      });
     }
   };
 
@@ -302,7 +317,7 @@ async function executeRegisteredTool(
   page: Page,
   toolName: string,
   input: Record<string, unknown>
-): Promise<unknown> {
+): Promise<string> {
   return page.evaluate(async ({ name, rawInput }) => {
     const context = (document as Document & {
       modelContext: {
@@ -316,8 +331,13 @@ async function executeRegisteredTool(
       throw new Error(`browser test double 找不到 Tool：${name}`);
     }
 
-    const output = await context.executeTool(tool, JSON.stringify(rawInput));
-    return typeof output === 'string' ? JSON.parse(output) as unknown : output;
+    const rawOutput = await context.executeTool(tool, JSON.stringify(rawInput));
+
+    if (typeof rawOutput !== 'string') {
+      throw new Error(`browser test double 的 Tool ${name} 未回傳 JSON string`);
+    }
+
+    return rawOutput;
   }, { name: toolName, rawInput: input });
 }
 
