@@ -1,10 +1,10 @@
-import type { SaveEventUseCase } from '../application/save-event';
+import type { SaveEventResult, SaveEventUseCase } from '../application/save-event';
 
 export interface SaveEventHumanUiOptions {
   /** 收藏成功後同步畫面狀態。 */
-  readonly onSaveSuccess?: () => Promise<void> | void;
+  readonly onSaveSuccess?: (result: Extract<SaveEventResult, { status: 'ok' }>) => Promise<void> | void;
   /** 收藏失敗後顯示使用者可理解的錯誤訊息。 */
-  readonly onSaveError?: (message: string) => void;
+  readonly onSaveError?: (result: Extract<SaveEventResult, { status: 'error' }>) => void;
 }
 
 /**
@@ -18,11 +18,11 @@ export function createSaveEventHumanUiHandler(
     const result = await useCase.execute({ eventId });
 
     if (result.status === 'error') {
-      options.onSaveError?.(result.message);
+      options.onSaveError?.(result);
 
       return;
     }
 
-    await options.onSaveSuccess?.();
+    await options.onSaveSuccess?.(result);
   };
 }

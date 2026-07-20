@@ -36,3 +36,32 @@
 ## 自評
 
 範圍僅收斂 UI 與 `save_event` 的收藏 use case；未加入 Day24 的 route、`detailUrl` 或 lifecycle，亦未移動 Day1–22 refs。Task brief 所列的 `src/webmcp/current-event-tools.ts` 在本工作樹不存在；Task5 的實際 Tool 實作是 `src/webmcp/save-event-tool.ts`，baseline 已正確委派 use case，因此沒有為了產生差異而改寫它。
+
+## Review 補強（2026-07-20）
+
+### Caller-result contract 的 TDD
+
+1. RED：將 caller tests 改為讓 UI 與 Tool 分別使用同一筆 fake `SaveEventSuccess`、同一筆 fake `ApiError`。預期失敗：UI success callback 收到空參數，UI error callback 只收到 message；Tool 的 JSON assertions 已通過。
+2. GREEN：`SaveEventHumanUiOptions` 的 success/error callback 改為接收完整 discriminated result；`main.ts` 只在 UI error boundary 讀取 `result.message`。Tool mapping 未改動。
+3. GREEN verification：`tests/application/save-event-callers.test.ts` 2 passed，`npm run typecheck` passed。
+
+### 現有 Day23 ref 的 single-branch fresh clone
+
+沒有變動 `day-23-shared-use-case` 或 `v0.1.0-day-23`，由 controller 在 review 後處理 audited revision。
+
+```powershell
+git clone --no-local --single-branch --branch day-23-shared-use-case `
+  D:\MySelf\iThome-2026\WebMCP\AgentReady-Events-V2-day19-26 `
+  C:\Users\ERICHU~1\AppData\Local\Temp\agent-ready-events-v2-day23-review-20260720205940\repository
+```
+
+| Evidence | Result |
+| --- | --- |
+| source reader branch | `day-23-shared-use-case` |
+| tag peeled SHA (`v0.1.0-day-23^0`) | `e29e30182179af45d4fa4a7afd3c8aeac7abe040` |
+| clone HEAD | `e29e30182179af45d4fa4a7afd3c8aeac7abe040` |
+| `npm ci` | 80 packages added; 0 vulnerabilities |
+| `npm run typecheck` | passed |
+| full `npm test` | 14 files, 65 passed |
+| `npm run test:browser` | 13 passed |
+| `npm run build` | passed; Vite completed in 181 ms |

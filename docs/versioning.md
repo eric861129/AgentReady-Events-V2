@@ -71,7 +71,7 @@ Day 21 曾因審查發現的缺陷進行一次經授權的快照修訂；Day 22 
 | 20 | `day-20-human-confirmation` | `v0.1.0-day-20` | 已發布 |
 | 21 | `day-21-save-event` | `v0.1.0-day-21` | 已修訂並封存原快照 |
 | 22 | `day-22-visible-tool-state` | `v0.1.0-day-22` | 已第二次修訂並封存前快照 |
-| 23 | `day-23-shared-use-case` | `v0.1.0-day-23` | 待建立 |
+| 23 | `day-23-shared-use-case` | `v0.1.0-day-23` | 已完成；目前兩個本機 ref 都指向 `e29e30182179af45d4fa4a7afd3c8aeac7abe040`，review 後由 controller 另行稽核修訂 |
 | 24 | `day-24-tool-lifecycle` | `v0.1.0-day-24` | 待建立 |
 | 25 | `day-25-agent-journey` | `v0.1.0-day-25` | 待建立 |
 | 26 | `day-26-server-authorization` | `v0.1.0-day-26` | 待建立 |

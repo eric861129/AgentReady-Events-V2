@@ -38,8 +38,8 @@ const saveEventFromHumanUi = createSaveEventHumanUiHandler(saveEventUseCase, {
     lastRemovedEventId = null;
     await synchronizeSavedEvents();
   },
-  onSaveError: (message) => {
-    savedEventsError = message;
+  onSaveError: (result) => {
+    savedEventsError = result.message;
     render();
   }
 });

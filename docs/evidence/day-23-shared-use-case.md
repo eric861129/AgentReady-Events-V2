@@ -28,3 +28,23 @@ npm run typecheck
 ```
 
 `tests/application/save-event-callers.test.ts` 使用 fake `SaveEventUseCase` 的 spy，分別證明 UI caller 與 Tool caller 各以相同的 `{ eventId }` 呼叫一次；同時涵蓋 `SaveEventSuccess` 與 `ApiError` 的 UI 邊界處理。
+
+## Snapshot gate（review 補強）
+
+2026-07-20 以 Day23 現有 reader branch 建立真正的單分支 clone；沒有移動 branch 或 tag。
+
+```powershell
+git clone --no-local --single-branch --branch day-23-shared-use-case `
+  D:\MySelf\iThome-2026\WebMCP\AgentReady-Events-V2-day19-26 `
+  C:\Users\ERICHU~1\AppData\Local\Temp\agent-ready-events-v2-day23-review-20260720205940\repository
+```
+
+- branch clone HEAD：`e29e30182179af45d4fa4a7afd3c8aeac7abe040`
+- `v0.1.0-day-23^0` peeled SHA：`e29e30182179af45d4fa4a7afd3c8aeac7abe040`
+- `npm ci`：新增 80 packages、audit 81 packages、0 vulnerabilities。
+- `npm run typecheck`：passed。
+- `npm test`：14 test files、65 passed。
+- `npm run test:browser`：13 passed。
+- `npm run build`：typecheck + Vite production build passed（181 ms）。
+
+本次 caller contract 亦確認兩個入口各一次呼叫 shared use case；對同一筆 `SaveEventSuccess`，UI success boundary 收到完整 result、Tool 原樣回傳 JSON；對同一筆 `ApiError`，UI error boundary 收到完整 result、Tool 同樣原樣回傳 JSON。
