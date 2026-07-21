@@ -15,6 +15,12 @@
     "test:server": "vitest run tests/server",
     "test:browser": "playwright test",
     "test:browser:button-copy": "playwright test --config playwright.button-copy-experiment.config.ts",
+    "test:day-27:contract": "vitest run tests/search-events-webmcp-tool.test.ts tests/search-events-tool.test.ts",
+    "test:day-27:lifecycle": "vitest run tests/webmcp/current-event-tool-lifecycle.test.ts tests/application/save-event.test.ts",
+    "test:day-27:journey": "vitest run tests/integration/day-25-agent-journey.test.ts",
+    "test:day-27:boundary": "vitest run tests/server/demo-api.test.ts",
+    "test:day-27:browser": "playwright test tests/browser/webmcp-runtime.spec.ts tests/browser/day-24-tool-lifecycle.spec.ts tests/browser/day-25-agent-journey.spec.ts tests/browser/day-26-trusted-boundary.spec.ts",
+    "test:day-27": "npm run test:day-27:contract && npm run test:day-27:lifecycle && npm run test:day-27:journey && npm run test:day-27:boundary && npm run test:day-27:browser",
     "capture:articles": "node scripts/capture-article-screenshots.mjs",
     "build": "npm run typecheck && vite build"
   },
