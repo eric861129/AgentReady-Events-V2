@@ -1,0 +1,5 @@
+{
+  "query": "前端",
+  "rawToolOutput": "{\"status\":\"ok\",\"appliedFilters\":{\"query\":\"前端\"},\"results\":[{\"eventId\":\"event-frontend-summit\",\"title\":\"前端體驗設計小聚\",\"category\":\"前端\",\"date\":\"2026-08-08\",\"location\":\"台北市信義區\",\"summary\":\"從語意、效能到互動細節，重新檢視網頁體驗。\",\"detailUrl\":\"http://127.0.0.1:4174/?event=event-frontend-summit\"}]}",
+  "boundary": "Tool 直接執行；不是原生 Agent，也不代表 WebMCP 取代 UI 測試。"
+}

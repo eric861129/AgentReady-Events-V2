@@ -1,0 +1,31 @@
+
+> agent-ready-events-v2@0.1.0 test:browser:button-copy
+> playwright test --config playwright.button-copy-experiment.config.ts
+
+
+Running 1 test using 1 worker
+
+[1/1] tests\experiments\day-05-button-copy.spec.ts:3:1 › 搜尋按鈕完整文案可驅動固定活動查詢
+  1) tests\experiments\day-05-button-copy.spec.ts:3:1 › 搜尋按鈕完整文案可驅動固定活動查詢 ──────────────────────────
+
+    Test timeout of 4000ms exceeded.
+
+    Error: locator.click: Test timeout of 4000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '搜尋活動', exact: true })
+
+
+      4 |   await page.goto('/');
+      5 |   await page.getByLabel('搜尋活動').fill('前端');
+    > 6 |   await page.getByRole('button', { name: '搜尋活動', exact: true }).click();
+        |                                                                 ^
+      7 |
+      8 |   await expect(page.locator('article[data-event-id="event-frontend-summit"]')).toBeVisible();
+      9 | });
+        at <project>\tests\experiments\day-05-button-copy.spec.ts:6:65
+
+    Error Context: output\playwright\day-05\day-05-button-copy-搜尋按鈕完整文案可驅動固定活動查詢\error-context.md
+
+
+  1 failed
+    tests\experiments\day-05-button-copy.spec.ts:3:1 › 搜尋按鈕完整文案可驅動固定活動查詢 ───────────────────────────
