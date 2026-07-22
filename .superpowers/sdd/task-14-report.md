@@ -1,45 +1,43 @@
-# Task 14 Report — Day 25 預發布 raw Tool evidence 修訂
+# Task 14 審查報告：Day 25 原始 Tool 回傳證據修正
 
-## 狀態
+## 結論：PASS
 
-完成 Day 25 evidence truthfulness 修訂。變更只位於 Day 25 test-support、integration/browser tests 與 evidence 文件；沒有修改 production source、API/session behavior、canonical event ID、其他日的 snapshot refs、文章或 assets。
+審查基準為 `e8a0590..f071bf2`。未發現阻擋 Day 25 預發佈快照修正的問題。
 
-## 修訂內容
+## 需求逐項驗證
 
-- `Day25JourneyTestDoubleClient.executeTool()` 現在以 `Promise<string>` 表達 Tool response transport contract。
-- 每個 `invoke` step 同時保存 `rawOutput` 與 `output`：前者是 `executeTool()` 原樣回傳字串，後者只由同一字串 `JSON.parse()` 取得。
-- browser helper 不再先 parse Tool response；它會驗證回傳值是 JSON string，並把原字串交給 journey runner。
-- 新增 `Day25JourneyTestDoubleAttachment` schema；attachment assertions 會確認三個 invocation step 都有字串型 `rawOutput`，且 `JSON.parse(rawOutput)` 深度等於同 step 的 `output`。
-- `docs/evidence/day-25-agent-journey.md` 已區分 attachment JSON、raw Tool transport string 與 parsed assertion value；導覽 step 不是 Tool invocation，因此不宣稱有 `rawOutput`。
+1. `rawOutput` 由 `Day25JourneyTestDoubleClient.executeTool()` 直接取得並保存；
+   `invokeAndRecord()` 只在保存後以 `JSON.parse(rawOutput)` 產生獨立的 `output`。
+   沒有將解析後物件再以 `JSON.stringify()` 當成原始傳輸字串。
+2. 每個 invocation step 同時保留可讀的結構化 `output`，供 journey 判斷及斷言使用。
+3. 瀏覽器附件使用 `Day25JourneyTestDoubleAttachment`。測試會重新解析附件，逐一確認三個
+   invocation step 的 `rawOutput` 為字串，且 `JSON.parse(rawOutput)` 深度等於同 step 的
+   `output`。
+4. `git diff --name-only e8a0590..HEAD -- src server` 沒有輸出；本修正僅觸及測試支援、
+   integration/browser tests、Day 25 證據文件與本報告，沒有改變產品程式、Demo API/session、
+   canonical event ID 或 Day 24–26 快照內容。
+5. integration 回歸測試刻意令 `rawSearchOutput` 為含換行與縮排的 JSON 字串，並以原字串做
+   嚴格比對。若實作退回成 `JSON.stringify(JSON.parse(rawOutput))`，字串格式會變成 compact JSON，
+   該斷言會失敗；因此能抓到本次關心的重序列化回歸。
+6. `docs/evidence/day-25-agent-journey.md` 明確區分原始 transport string 與 parsed output，
+   也標註這是 adapter fake / Playwright browser test double，不宣稱為原生 Chrome Inspector、
+   Agent discovery 或正式 Agent 證據。
 
-## TDD 紀錄
+## 實際驗證
 
-1. RED：先加入含換行與縮排的 Tool JSON string regression。聚焦 integration 執行為 7 tests 中 1 failed，差異明確顯示 invocation step 缺少 `rawOutput`；既有 6 tests 通過。
-2. RED：先加入 browser attachment assertion。主要 journey browser test 失敗，明確顯示 `rawOutput` 型別為 `undefined`，預期為 `string`。
-3. GREEN：讓 test-double client 傳遞原始字串，runner 保存 `rawOutput` 後再 parse `output`；同步調整故障注入 fake，使它們回傳 JSON string。
-4. GREEN：聚焦 integration 7/7、主要 browser journey 1/1。
-5. REFACTOR：加入明確 attachment type，並將文件語意收斂為可稽核的 raw transport string；聚焦 integration 7/7、Day 25 browser 3/3、typecheck 通過。
-
-非 compact JSON regression 會逐字比對 `rawOutput`。若未保存 raw string，或從 parsed `output` 重新 `JSON.stringify()`，縮排與換行會遺失，測試會失敗。
-
-## 驗證
-
-| Gate | 結果 |
+| 指令 | 結果 |
 | --- | --- |
-| `npm test -- tests/integration/day-25-agent-journey.test.ts` | 1 file、7 passed |
+| `npm test -- tests/integration/day-25-agent-journey.test.ts` | 1 file、7 tests passed |
 | `npm run test:browser -- --grep "Day 25"` | 3 passed |
 | `npm run typecheck` | passed |
-| `npm test` | 18 files、83 passed |
+| `npm test` | 18 files、83 tests passed |
 | `npm run test:browser` | 18 passed |
-| `npm run build` | typecheck 與 Vite build passed；19 modules transformed |
-| strict UTF-8 decode + U+FFFD scan | brief、report、Day 25 evidence 與三個變更測試檔全數通過 |
-| `git diff --check` | passed |
-| `git diff e8a0590 -- src server` | 無差異 |
+| `npm run build` | typecheck 與 Vite build passed（19 modules transformed） |
+| strict UTF-8 decode + U+FFFD scan | 所有本次審查文件皆為有效 UTF-8，且沒有 U+FFFD |
+| `git diff --check e8a0590..HEAD` | passed |
 
-## 範圍與風險
+## 審查界線
 
-- Base：`e8a0590a9ed2faba6f871b53fedcf48f280272af`。
-- canonical event ID 保持 `event-frontend-summit`，沒有 alias。
-- 沒有修改 `src/`、`server/`、Day 24／26 文件、snapshot refs、文章或 assets。
-- 沒有 push、force push、branch/tag repoint 或 remote publication。
-- `JSON.parse()` 遇到非 JSON transport string 會讓 test journey 失敗；這符合本 evidence runner 只接受 Tool JSON string 的邊界。
+- 本報告是對 Day 25 test-double 證據鏈的審查；它不把 test double 冒充為原生 WebMCP/Chrome
+  Inspector/Agent runtime 證據。
+- 本次未進行 remote push、tag/branch 重指向或文章資產異動。
